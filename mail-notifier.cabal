@@ -78,7 +78,7 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.17.2.1
+    build-depends:    base
                     , HaskellNet-SSL
                     , HaskellNet
                     , dbus
@@ -112,7 +112,7 @@ executable mail-notifier
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.17.2.1
+    build-depends:    base
                     , mail-notifier
 
     -- Directories containing source files.
@@ -145,5 +145,5 @@ test-suite mail-notifier-test
     main-is:          Main.hs
 
     -- Test dependencies.
-    build-depends:    base ^>=4.17.2.1
+    build-depends:    base
                     , mail-notifier
