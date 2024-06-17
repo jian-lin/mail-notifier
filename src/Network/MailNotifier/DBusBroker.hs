@@ -6,7 +6,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.MailNotifier.DBusService
+module Network.MailNotifier.DBusBroker
   ( main,
   )
 where

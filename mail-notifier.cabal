@@ -68,7 +68,7 @@ library
     -- Modules exported by the library.
     exposed-modules:  Network.MailNotifier
                     , Network.MailNotifier.Utils
-                    , Network.MailNotifier.DBusService
+                    , Network.MailNotifier.DBusBroker
 
     -- Modules included in this library but not exported.
     other-modules:    PackageInfo_mail_notifier
@@ -124,13 +124,13 @@ executable mail-notifier
     -- Base language which the package is written in.
     default-language: Haskell2010
 
-executable mail-notifier-dbus-service
+executable mail-notifier-dbus-broker
     -- Import common warning flags.
     import:           warnings
                     , thread
 
     -- .hs or .lhs file containing the Main module.
-    main-is:          MainDBusService.hs
+    main-is:          MainDBusBroker.hs
 
     -- Modules included in this executable, other than Main.
     -- other-modules:
