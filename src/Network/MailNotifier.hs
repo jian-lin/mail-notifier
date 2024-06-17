@@ -415,8 +415,11 @@ main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   args <- parseArgs
-  syncJobQueue <- atomically $ newTBQueue 10
-  watchdogQueue <- atomically $ newTBQueue 10
+  -- no exception raised from Integer -> Natural since mailboxes is NonEmpty
+  let mailboxNum = fromInteger $ toInteger $ length args.mailboxes
+      queueSize = 3 * mailboxNum
+  syncJobQueue <- atomically $ newTBQueue queueSize
+  watchdogQueue <- atomically $ newTBQueue queueSize
   let env :: Env App
       env =
         Env
