@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -269,7 +270,7 @@ app = do
         run env (sync client objectPath)
       -- NOTE setting sslLogToConsole to True will print your password in clear text!
       imapSettings :: Settings
-      imapSettings = defaultSettingsIMAPSSL {sslMaxLineLength = 100000, sslLogToConsole = False}
+      imapSettings = defaultSettingsIMAPSSL {sslMaxLineLength = 100_000, sslLogToConsole = False}
       watchThreads :: NonEmpty (IO ())
       watchThreads =
         NL.map
@@ -388,7 +389,7 @@ argsParser =
       ( long "idle-timeout"
           <> metavar "MILLISECOND"
           <> showDefault
-          <> value (2 * 60 * 1000)
+          <> value (2 * 60 * 1_000)
           <> help "Timeout for IMAP IDLE command"
       )
     <*> option
@@ -396,7 +397,7 @@ argsParser =
       ( long "read-sync-jobs-timeout"
           <> metavar "MICROSECOND"
           <> showDefault
-          <> value (5 * 1000 * 1000)
+          <> value 5_000_000
           <> help "Timeout for reading following sync jobs before performing one sync"
       )
     <*> option -- TODO warn if too long since conn may be cut by middle boxes
@@ -404,7 +405,7 @@ argsParser =
       ( long "poll-interval"
           <> metavar "MICROSECOND"
           <> showDefault
-          <> value (2 * 60 * 1000 * 1000)
+          <> value (2 * 60 * 1_000_000)
           <> help "Interval for polling new mails (fallback if IDLE is not supported)"
       )
     <*> option -- TODO find a way to show valid values
