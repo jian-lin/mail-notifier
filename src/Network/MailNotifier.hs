@@ -104,7 +104,7 @@ type Password = String
 -- So if it runs fine for a while, it should be restarted if crashes.
 -- Two exceptions I can think of are (1) the password is changed and (2) the mailbox is deleted.
 watch ::
-  (WithLog env Message m, MonadIO m, HasArgs env, HasQueue env) =>
+  (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env) =>
   IMAPConnection ->
   Password ->
   MailboxName ->
@@ -124,8 +124,8 @@ watch conn password accountMailbox = do
       getMailNum = exists conn
   mailNum <- liftIO getMailNum
   logInfo $ pack (show mailNum) <> " mails in " <> pack accountMailbox
-  queue <- asks getQueue
-  liftIO $ atomically $ writeTBQueue queue () -- initial sync job
+  syncJobQueue <- asks getSyncJobQueue
+  liftIO $ atomically $ writeTBQueue syncJobQueue () -- initial sync job
   let supportIdle :: Bool
       supportIdle = "IDLE" `elem` map (map toUpper) capabilities -- assume case-insensitive
       watchAwhile :: IO ()
@@ -137,7 +137,7 @@ watch conn password accountMailbox = do
   watchLoop mailNum watchAwhile getMailNum accountMailbox
 
 watchLoop ::
-  (WithLog env Message m, MonadIO m, HasQueue env) =>
+  (WithLog env Message m, MonadIO m, HasSyncJobQueue env) =>
   Integer ->
   IO () ->
   IO Integer ->
@@ -151,7 +151,7 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
       else "sent watchdog to systemd"
   liftIO watchAwhile
   newMailNum <- liftIO getMailNum
-  queue <- asks getQueue
+  syncJobQueue <- asks getSyncJobQueue
   if newMailNum == mailNum
     then do
       logDebug $
@@ -164,20 +164,20 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
           <> pack (show (newMailNum - mailNum))
           <> " new mail(s), total "
           <> pack (show mailNum)
-      liftIO $ atomically $ writeTBQueue queue ()
+      liftIO $ atomically $ writeTBQueue syncJobQueue ()
       watchLoop newMailNum watchAwhile getMailNum accountMailbox
 
 sync ::
-  (WithLog env Message m, MonadIO m, HasArgs env, HasQueue env) =>
+  (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env) =>
   Client ->
   ObjectPath ->
   m ()
 sync client objectPath = do
   args <- asks getArgs
   logInfo "wait for sync jobs"
-  queue <- asks getQueue
-  _ <- liftIO $ atomically $ readTBQueue queue
-  liftIO $ atomicallyTimeoutUntilFail_ args.readSyncJobsTimeout $ readTBQueue queue
+  syncJobQueue <- asks getSyncJobQueue
+  _ <- liftIO $ atomically $ readTBQueue syncJobQueue
+  liftIO $ atomicallyTimeoutUntilFail_ args.readSyncJobsTimeout $ readTBQueue syncJobQueue
   logInfo "got sync jobs, start to sync"
   output <-
     liftIO $
@@ -269,7 +269,7 @@ data Args = Args
 
 data Env m = Env
   { envLogAction :: !(LogAction m Message),
-    envQueue :: !SyncJobQueue,
+    envSyncJobQueue :: !SyncJobQueue,
     envArgs :: !Args
   }
 
@@ -285,7 +285,7 @@ instance HasLog (Env m) Message m where
   setLogAction newLogAction env = env {envLogAction = newLogAction}
   {-# INLINE setLogAction #-}
 
--- TODO are there better ways to do HasArgs and HasQueue?
+-- TODO are there better ways to do HasArgs and HasSyncJobQueue?
 class HasArgs env where
   getArgs :: env -> Args
 
@@ -294,13 +294,13 @@ instance HasArgs (Env m) where
   getArgs = envArgs
   {-# INLINE getArgs #-}
 
-class HasQueue env where
-  getQueue :: env -> SyncJobQueue
+class HasSyncJobQueue env where
+  getSyncJobQueue :: env -> SyncJobQueue
 
-instance HasQueue (Env m) where
-  getQueue :: Env m -> SyncJobQueue
-  getQueue = envQueue
-  {-# INLINE getQueue #-}
+instance HasSyncJobQueue (Env m) where
+  getSyncJobQueue :: Env m -> SyncJobQueue
+  getSyncJobQueue = envSyncJobQueue
+  {-# INLINE getSyncJobQueue #-}
 
 run :: Env App -> App a -> IO a
 run env application = runReaderT (runApp application) env
@@ -387,7 +387,12 @@ main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   args <- parseArgs
-  queue <- atomically $ newTBQueue 10
+  syncJobQueue <- atomically $ newTBQueue 10
   let env :: Env App
-      env = Env {envLogAction = mkLogAction args.logLevel, envQueue = queue, envArgs = args}
+      env =
+        Env
+          { envLogAction = mkLogAction args.logLevel,
+            envSyncJobQueue = syncJobQueue,
+            envArgs = args
+          }
   run env app
