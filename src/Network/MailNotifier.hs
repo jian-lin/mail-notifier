@@ -22,16 +22,28 @@ import Colog
     logWarning,
   )
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM (TBQueue, atomically, newTBQueue, readTBQueue, writeTBQueue)
-import Control.Monad (replicateM_, when)
+import Control.Concurrent.STM
+  ( TBQueue,
+    TMVar,
+    atomically,
+    newEmptyTMVar,
+    newTBQueue,
+    readTBQueue,
+    takeTMVar,
+    tryPutTMVar,
+    writeTBQueue,
+  )
+import Control.Monad (replicateM, when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader (ask), ReaderT (..), asks)
 import DBus (ObjectPath)
 import DBus.Client (Client, emit, nameDoNotQueue, requestName)
 import DBus.Internal.Message (Signal (..))
 import Data.Char (toUpper)
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HM (elems, fromList, (!))
 import Data.List.NonEmpty (NonEmpty, (<|))
-import qualified Data.List.NonEmpty as NL (map)
+import qualified Data.List.NonEmpty as NL (map, toList)
 import Data.Maybe (isNothing)
 import Data.Text (pack)
 import Data.Version (showVersion)
@@ -93,7 +105,7 @@ import System.Systemd.Daemon (notifyWatchdog)
 
 type SyncJobQueue = TBQueue ()
 
-type WatchdogQueue = TBQueue ()
+type WatchdogState = HashMap MailboxName (TMVar ())
 
 type Username = String
 
@@ -106,7 +118,7 @@ type Password = String
 -- So if it runs fine for a while, it should be restarted if crashes.
 -- Two exceptions I can think of are (1) the password is changed and (2) the mailbox is deleted.
 watch ::
-  (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env, HasWatchdogQueue env) =>
+  (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env, HasWatchdogState env) =>
   IMAPConnection ->
   Password ->
   MailboxName ->
@@ -139,15 +151,15 @@ watch conn password accountMailbox = do
   watchLoop mailNum watchAwhile getMailNum accountMailbox
 
 watchLoop ::
-  (WithLog env Message m, MonadIO m, HasSyncJobQueue env, HasWatchdogQueue env) =>
+  (WithLog env Message m, MonadIO m, HasSyncJobQueue env, HasWatchdogState env) =>
   Integer ->
   IO () ->
   IO Integer ->
   MailboxName ->
   m ()
 watchLoop mailNum watchAwhile getMailNum accountMailbox = do
-  watchdogQueue <- asks getWatchdogQueue
-  liftIO $ atomically $ writeTBQueue watchdogQueue ()
+  watchdogState <- asks ((HM.! accountMailbox) . getWatchdogState)
+  _ <- liftIO $ atomically $ tryPutTMVar watchdogState ()
   liftIO watchAwhile
   newMailNum <- liftIO getMailNum
   syncJobQueue <- asks getSyncJobQueue
@@ -213,13 +225,13 @@ notify client objectPath = do
   logDebug $ "DBus: " <> pack (show signal)
 
 watchdog ::
-  (WithLog env Message m, MonadIO m, HasWatchdogQueue env, HasArgs env) =>
+  (WithLog env Message m, MonadIO m, HasWatchdogState env, HasArgs env) =>
   m ()
 watchdog = do
   args <- asks getArgs
   let mailboxNum = length args.mailboxes
-  watchdogQueue <- asks getWatchdogQueue
-  liftIO $ replicateM_ mailboxNum $ atomically $ readTBQueue watchdogQueue
+  watchdogState <- asks getWatchdogState
+  liftIO $ atomically $ mapM_ takeTMVar $ HM.elems watchdogState
   reply <- liftIO notifyWatchdog
   logDebug $
     "all "
@@ -289,7 +301,7 @@ data Args = Args
 data Env m = Env
   { envLogAction :: !(LogAction m Message),
     envSyncJobQueue :: !SyncJobQueue,
-    envWatchdogQueue :: !WatchdogQueue,
+    envWatchdogState :: !WatchdogState,
     envArgs :: !Args
   }
 
@@ -322,13 +334,13 @@ instance HasSyncJobQueue (Env m) where
   getSyncJobQueue = envSyncJobQueue
   {-# INLINE getSyncJobQueue #-}
 
-class HasWatchdogQueue env where
-  getWatchdogQueue :: env -> WatchdogQueue
+class HasWatchdogState env where
+  getWatchdogState :: env -> WatchdogState
 
-instance HasWatchdogQueue (Env m) where
-  getWatchdogQueue :: Env m -> WatchdogQueue
-  getWatchdogQueue = envWatchdogQueue
-  {-# INLINE getWatchdogQueue #-}
+instance HasWatchdogState (Env m) where
+  getWatchdogState :: Env m -> WatchdogState
+  getWatchdogState = envWatchdogState
+  {-# INLINE getWatchdogState #-}
 
 run :: Env App -> App a -> IO a
 run env application = runReaderT (runApp application) env
@@ -416,16 +428,16 @@ main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   args <- parseArgs
   -- no exception raised from Integer -> Natural since mailboxes is NonEmpty
-  let mailboxNum = fromInteger $ toInteger $ length args.mailboxes
-      queueSize = 3 * mailboxNum
+  let mailboxNum = length args.mailboxes
+      queueSize = 3 * fromInteger (toInteger mailboxNum)
   syncJobQueue <- atomically $ newTBQueue queueSize
-  watchdogQueue <- atomically $ newTBQueue queueSize
+  vs <- atomically $ replicateM mailboxNum newEmptyTMVar
   let env :: Env App
       env =
         Env
           { envLogAction = mkLogAction args.logLevel,
             envSyncJobQueue = syncJobQueue,
-            envWatchdogQueue = watchdogQueue,
+            envWatchdogState = HM.fromList $ zip (NL.toList args.mailboxes) vs,
             envArgs = args
           }
   run env app

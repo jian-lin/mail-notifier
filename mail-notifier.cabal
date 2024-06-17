@@ -91,6 +91,7 @@ library
                     , text
                     , chronos
                     , systemd
+                    , unordered-containers
 
     -- Directories containing source files.
     hs-source-dirs:   src
