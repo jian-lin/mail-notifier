@@ -37,9 +37,8 @@ import Control.Concurrent.STM
 import Control.Monad (replicateM, when)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Reader (MonadReader (ask), ReaderT (..), asks)
-import DBus (ObjectPath)
-import DBus.Client (Client, emit, nameDoNotQueue, requestName)
-import DBus.Internal.Message (Signal (..))
+import DBus (MethodCall (methodCallDestination), methodCall)
+import DBus.Client (Client, call_)
 import Data.Char (toUpper)
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM (elems, fromList, (!))
@@ -63,11 +62,12 @@ import Network.MailNotifier.Utils
   ( AccountName,
     Server,
     atomicallyTimeoutUntilFail_,
+    busName,
     interface,
-    mkBusName,
     mkLogAction,
-    mkObjectPath,
+    objectPath,
     raceMany,
+    syncNotificationMethodName,
     withDBus,
     withImap,
   )
@@ -182,9 +182,8 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
 sync ::
   (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env) =>
   Client ->
-  ObjectPath ->
   m ()
-sync client objectPath = do
+sync client = do
   args <- asks getArgs
   logInfo "wait for sync jobs"
   syncJobQueue <- asks getSyncJobQueue
@@ -202,28 +201,37 @@ sync client objectPath = do
         ""
   when (output /= "") $ -- has warnings
     logWarning ("sync output: " <> pack output)
-  notify client objectPath
-  logInfo "emitted a synced signal"
-  sync client objectPath
+  notify client
+  logInfo "sent a synced notification"
+  sync client
 
 -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
 notify ::
   (WithLog env Message m, MonadIO m, HasArgs env) =>
   Client ->
-  ObjectPath ->
   m ()
-notify client objectPath = do
-  let signal =
-        Signal
-          { signalPath = objectPath,
-            signalInterface = interface,
-            signalMember = "Synced",
-            signalSender = Nothing,
-            signalDestination = Nothing,
-            signalBody = []
+notify client = do
+  _ <-
+    liftIO $
+      call_
+        client
+        ( methodCall
+            objectPath
+            interface
+            syncNotificationMethodName
+        )
+          { methodCallDestination = Just busName
           }
-  liftIO $ emit client signal
-  logDebug $ "DBus: " <> pack (show signal)
+
+  logDebug $
+    "DBus: called method "
+      <> pack (show syncNotificationMethodName)
+      <> " at "
+      <> pack (show busName)
+      <> " "
+      <> pack (show objectPath)
+      <> " "
+      <> pack (show interface)
 
 watchdog ::
   (WithLog env Message m, MonadIO m, HasWatchdogState env, HasArgs env) =>
@@ -259,15 +267,11 @@ app = do
   --   a client may increase the overhead of its sheduler
   let mailboxNum = length args.mailboxes
   when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> pack (show mailboxNum)
-  let busName = mkBusName args.accountName
-      objectPath = mkObjectPath args.accountName
-  logInfo $ "DBus: " <> pack (show busName) <> " " <> pack (show objectPath)
+  logInfo $
+    "DBus: " <> pack (show busName) <> " " <> pack (show objectPath) <> " " <> pack (show interface)
   env <- ask
   let syncThread :: IO ()
-      syncThread = withDBus $ \client -> do
-        _reply <- requestName client busName [nameDoNotQueue]
-        -- TODO logDebug reply
-        run env (sync client objectPath)
+      syncThread = withDBus $ \client -> run env (sync client)
       -- NOTE setting sslLogToConsole to True will print your password in clear text!
       imapSettings :: Settings
       imapSettings = defaultSettingsIMAPSSL {sslMaxLineLength = 100_000, sslLogToConsole = False}

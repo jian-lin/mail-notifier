@@ -8,11 +8,10 @@ module Network.MailNotifier.Utils
     atomicallyTimeoutUntilFail_,
     busName,
     interface,
-    mkBusName,
     mkLogAction,
-    mkObjectPath,
     objectPath,
     raceMany,
+    syncNotificationMethodName,
     withDBus,
     withImap,
   )
@@ -42,7 +41,7 @@ import Control.Concurrent.STM (STM, atomically, check, orElse, readTVar, registe
 import Control.Exception (bracket)
 import Control.Monad ((<=<))
 import Control.Monad.IO.Class (MonadIO)
-import DBus (BusName, ObjectPath, busName_, formatBusName, formatObjectPath, objectPath_)
+import DBus (BusName, MemberName, ObjectPath)
 import DBus.Client (Client, connectSystem, disconnect)
 import DBus.Internal.Types (InterfaceName)
 import Data.Foldable (asum, toList)
@@ -82,28 +81,6 @@ interface = "tech.linj.MailNotifier"
 
 type AccountName = String
 
-validElementsForBusName :: [Char]
-validElementsForBusName = '-' : validElementsForObjectPath
-
-validElementsForObjectPath :: [Char]
-validElementsForObjectPath = concat [['A' .. 'Z'], ['a' .. 'z'], ['0' .. '9'], ['_']]
-
--- basic escape: some constraints, such as length, are ignored
-escapeDBusName :: String -> [Char] -> String
-escapeDBusName name validElements = map (\c -> if c `elem` validElements then c else '_') name
-
--- https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-names-bus
-mkBusName :: AccountName -> BusName
-mkBusName accountName =
-  busName_ $
-    formatBusName busName ++ "." ++ escapeDBusName accountName validElementsForBusName
-
--- https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path
-mkObjectPath :: AccountName -> ObjectPath
-mkObjectPath accountName =
-  objectPath_ $
-    formatObjectPath objectPath ++ "/" ++ escapeDBusName accountName validElementsForObjectPath
-
 raceMany :: (Foldable t) => t (IO a) -> IO a
 raceMany actions = runConcurrently $ asum $ map Concurrently $ toList actions
 
@@ -126,3 +103,6 @@ mkLogAction severity =
         upgradeMessageAction defaultFieldMap $
           cmapM (fmap encodeUtf8 . fmtRichMessage) logByteStringStdout
    in filterBySeverity severity msgSeverity logAction
+
+syncNotificationMethodName :: MemberName
+syncNotificationMethodName = "Notify"
