@@ -90,6 +90,7 @@ library
                     , mtl
                     , text
                     , chronos
+                    , systemd
 
     -- Directories containing source files.
     hs-source-dirs:   src

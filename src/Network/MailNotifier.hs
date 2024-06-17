@@ -32,6 +32,7 @@ import DBus.Internal.Message (Signal (..))
 import Data.Char (toUpper)
 import Data.List.NonEmpty (NonEmpty, (<|))
 import qualified Data.List.NonEmpty as NL (map)
+import Data.Maybe (isNothing)
 import Data.Text (pack)
 import Data.Version (showVersion)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection, exists)
@@ -81,6 +82,7 @@ import Options.Applicative.NonEmpty (some1)
 import PackageInfo_mail_notifier (synopsis, version)
 import System.IO (BufferMode (..), hSetBuffering, stdout)
 import System.Process (readProcess)
+import System.Systemd.Daemon (notifyWatchdog)
 
 -- TODO patch HaskellNetSSL to replace connection with crypton-connection
 -- https://github.com/dpwright/HaskellNet-SSL/pull/34/files
@@ -142,6 +144,11 @@ watchLoop ::
   MailboxName ->
   m ()
 watchLoop mailNum watchAwhile getMailNum accountMailbox = do
+  reply <- liftIO notifyWatchdog
+  logDebug $
+    if isNothing reply
+      then "watchdog is not enabled in systemd"
+      else "sent watchdog to systemd"
   liftIO watchAwhile
   newMailNum <- liftIO getMailNum
   queue <- asks getQueue
