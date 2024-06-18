@@ -93,9 +93,11 @@ import Options.Applicative
   )
 import Options.Applicative.NonEmpty (some1)
 import PackageInfo_mail_notifier (synopsis, version)
+import System.Environment (lookupEnv)
 import System.IO (BufferMode (..), hSetBuffering, stdout)
 import System.Process (readProcess)
 import System.Systemd.Daemon (notifyWatchdog)
+import Text.Read (readMaybe)
 
 -- TODO patch HaskellNetSSL to replace connection with crypton-connection
 -- https://github.com/dpwright/HaskellNet-SSL/pull/34/files
@@ -251,6 +253,34 @@ watchdog = do
         else "sent watchdog to systemd"
   watchdog
 
+warnArgs :: (WithLog env Message m, MonadIO m, HasArgs env) => m ()
+warnArgs = do
+  args <- asks getArgs
+
+  -- running an unbounded numbder of threads concurrently is a bad pattern
+  -- since too many threads can cause resouces issues
+  --   a server may limit number of connections from a single client
+  --   a client may use up its memory (less likely in this case)
+  --   a client may increase the overhead of its sheduler
+  let mailboxNum = length args.mailboxes
+  when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> pack (show mailboxNum)
+
+  watchdogTimeoutStringMaybe <- liftIO $ lookupEnv "WATCHDOG_USEC"
+  let watchdogTimeoutIntMaybe :: Maybe Int
+      watchdogTimeoutIntMaybe = watchdogTimeoutStringMaybe >>= readMaybe
+  case watchdogTimeoutIntMaybe of
+    Just watchdogTimeout ->
+      when (watchdogTimeout <= args.pollInterval || watchdogTimeout <= (args.idleTimeout * 1_000)) $
+        logWarning $
+          "systemd WatchdogSec ("
+            <> pack (show watchdogTimeout)
+            <> ") is smaller than poll interval ("
+            <> pack (show args.pollInterval)
+            <> ") or idle timeout ("
+            <> pack (show (args.idleTimeout * 1_000))
+            <> ") (unit: us)"
+    Nothing -> return ()
+
 -- TODO split env in ReaderT of sync and watch according to the "Next Level MTL" video
 -- TODO can we put withDBus into sync function? (also withImap)
 app :: App ()
@@ -260,13 +290,7 @@ app = do
   -- TODO is it better to: bracket openFile hClose $ \h -> ...
   -- what happens if readFile fails in the process of reading an opened file? will file be closed?
   password <- liftIO $ readFile args.passwordFile
-  -- running an unbounded numbder of threads concurrently is a bad pattern
-  -- since too many threads can cause resouces issues
-  --   a server may limit number of connections from a single client
-  --   a client may use up its memory (less likely in this case)
-  --   a client may increase the overhead of its sheduler
-  let mailboxNum = length args.mailboxes
-  when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> pack (show mailboxNum)
+  warnArgs
   logInfo $
     "DBus: " <> pack (show busName) <> " " <> pack (show objectPath) <> " " <> pack (show interface)
   env <- ask
