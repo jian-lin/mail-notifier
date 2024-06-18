@@ -43,7 +43,7 @@ import Data.Char (toUpper)
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM (elems, fromList, (!))
 import Data.List.NonEmpty (NonEmpty, (<|))
-import qualified Data.List.NonEmpty as NL (map, toList)
+import qualified Data.List.NonEmpty as NL (toList)
 import Data.Maybe (isNothing)
 import Data.Text (pack)
 import Data.Version (showVersion)
@@ -142,7 +142,7 @@ watch conn password accountMailbox = do
   syncJobQueue <- asks getSyncJobQueue
   liftIO $ atomically $ writeTBQueue syncJobQueue () -- initial sync job
   let supportIdle :: Bool
-      supportIdle = "IDLE" `elem` map (map toUpper) capabilities -- assume case-insensitive
+      supportIdle = "IDLE" `elem` (fmap . fmap) toUpper capabilities -- assume case-insensitive
       watchAwhile :: IO ()
       watchAwhile =
         if supportIdle
@@ -277,7 +277,7 @@ app = do
       imapSettings = defaultSettingsIMAPSSL {sslMaxLineLength = 100_000, sslLogToConsole = False}
       watchThreads :: NonEmpty (IO ())
       watchThreads =
-        NL.map
+        fmap
           ( \mailbox ->
               withImap
                 args.server
