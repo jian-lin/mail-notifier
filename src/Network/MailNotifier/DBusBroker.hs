@@ -26,10 +26,29 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT (..), asks)
 import Control.Monad.STM (atomically)
 import DBus (MemberName)
-import DBus.Client (Client, RequestNameReply (NamePrimaryOwner), autoMethod, clientError, defaultInterface, emit, export, interfaceMethods, interfaceName, nameDoNotQueue, requestName)
+import DBus.Client
+  ( Client,
+    RequestNameReply (NamePrimaryOwner),
+    autoMethod,
+    clientError,
+    defaultInterface,
+    emit,
+    export,
+    interfaceMethods,
+    interfaceName,
+    nameDoNotQueue,
+    requestName,
+  )
 import DBus.Internal.Message (Signal (..))
 import Data.Text (pack)
-import Network.MailNotifier.Utils (atomicallyTimeoutUntilFail_, busName, interface, mkLogAction, objectPath, withDBus)
+import Network.MailNotifier.Utils
+  ( atomicallyTimeoutUntilFail_,
+    busName,
+    interface,
+    mkLogAction,
+    objectPath,
+    withDBus,
+  )
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 
 type Queue = TBQueue ()
