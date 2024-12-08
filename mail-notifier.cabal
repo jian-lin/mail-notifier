@@ -5,7 +5,7 @@ synopsis:
   A tool to immediately run mbsync and notify your MUA for new mails
 
 -- description:
-homepage:        https://TODO
+homepage:        https://github.com/jian-lin/mail-notifier
 license:         AGPL-3.0-or-later
 license-file:    LICENSE
 author:          Lin Jian
