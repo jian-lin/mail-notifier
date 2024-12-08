@@ -28,6 +28,7 @@ common deps
   build-depends: base ^>=4.18.2.1
 
   default-extensions: OverloadedStrings
+  default-language:   GHC2021
 
 library
   import:
@@ -59,8 +60,7 @@ library
     , text                  ^>=2.0.2
     , unordered-containers  ^>=0.2.20
 
-  hs-source-dirs:   src
-  default-language: Haskell2010
+  hs-source-dirs:  src
 
 executable mail-notifier
   import:
@@ -68,13 +68,12 @@ executable mail-notifier
     , thread
     , deps
 
-  main-is:          Main.hs
+  main-is:        Main.hs
 
   -- other-modules:
   -- other-extensions:
-  build-depends:    mail-notifier
-  hs-source-dirs:   app
-  default-language: Haskell2010
+  build-depends:  mail-notifier
+  hs-source-dirs: app
 
 executable mail-notifier-dbus-broker
   import:
@@ -82,13 +81,12 @@ executable mail-notifier-dbus-broker
     , thread
     , deps
 
-  main-is:          MainDBusBroker.hs
+  main-is:        MainDBusBroker.hs
 
   -- other-modules:
   -- other-extensions:
-  build-depends:    mail-notifier
-  hs-source-dirs:   app
-  default-language: Haskell2010
+  build-depends:  mail-notifier
+  hs-source-dirs: app
 
 test-suite mail-notifier-test
   import:
@@ -96,11 +94,9 @@ test-suite mail-notifier-test
     , thread
     , deps
 
-  default-language: Haskell2010
-
   -- other-modules:
   -- other-extensions:
-  type:             exitcode-stdio-1.0
-  hs-source-dirs:   test
-  main-is:          Main.hs
-  build-depends:    mail-notifier
+  type:           exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is:        Main.hs
+  build-depends:  mail-notifier
