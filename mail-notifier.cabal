@@ -24,10 +24,14 @@ common warnings
 common thread
   ghc-options: -threaded
 
+common deps
+  build-depends: base ^>=4.18.2.1
+
 library
   import:
     warnings
     , thread
+    , deps
 
   exposed-modules:
     MailNotifier
@@ -40,7 +44,6 @@ library
   -- other-extensions:
   build-depends:
     , async                 ^>=2.2.5
-    , base                  ^>=4.18.2.1
     , chronos               ^>=1.1.6.1
     , co-log                ^>=0.6.1.0
     , dbus                  ^>=1.3.3
@@ -61,15 +64,13 @@ executable mail-notifier
   import:
     warnings
     , thread
+    , deps
 
   main-is:          Main.hs
 
   -- other-modules:
   -- other-extensions:
-  build-depends:
-    , base           ^>=4.18.2.1
-    , mail-notifier
-
+  build-depends:    mail-notifier
   hs-source-dirs:   app
   default-language: Haskell2010
 
@@ -77,15 +78,13 @@ executable mail-notifier-dbus-broker
   import:
     warnings
     , thread
+    , deps
 
   main-is:          MainDBusBroker.hs
 
   -- other-modules:
   -- other-extensions:
-  build-depends:
-    , base           ^>=4.18.2.1
-    , mail-notifier
-
+  build-depends:    mail-notifier
   hs-source-dirs:   app
   default-language: Haskell2010
 
@@ -93,6 +92,7 @@ test-suite mail-notifier-test
   import:
     warnings
     , thread
+    , deps
 
   default-language: Haskell2010
 
@@ -101,6 +101,4 @@ test-suite mail-notifier-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          Main.hs
-  build-depends:
-    , base           ^>=4.18.2.1
-    , mail-notifier
+  build-depends:    mail-notifier
