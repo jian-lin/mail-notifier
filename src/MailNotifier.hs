@@ -7,7 +7,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.MailNotifier
+module MailNotifier
   ( main,
   )
 where
@@ -58,7 +58,7 @@ import Network.HaskellNet.IMAP.SSL
     select,
   )
 import Network.HaskellNet.IMAP.Types (MailboxName)
-import Network.MailNotifier.Utils
+import MailNotifier.Utils
   ( AccountName,
     Server,
     atomicallyTimeoutUntilFail_,

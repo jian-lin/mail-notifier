@@ -30,9 +30,9 @@ library
     , thread
 
   exposed-modules:
-    Network.MailNotifier
-    Network.MailNotifier.DBusBroker
-    Network.MailNotifier.Utils
+    MailNotifier
+    MailNotifier.DBusBroker
+    MailNotifier.Utils
 
   other-modules:    PackageInfo_mail_notifier
   autogen-modules:  PackageInfo_mail_notifier

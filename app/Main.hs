@@ -1,6 +1,6 @@
 module Main where
 
-import qualified Network.MailNotifier (main)
+import qualified MailNotifier (main)
 
 main :: IO ()
-main = Network.MailNotifier.main
+main = MailNotifier.main

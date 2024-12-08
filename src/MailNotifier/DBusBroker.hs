@@ -6,7 +6,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.MailNotifier.DBusBroker
+module MailNotifier.DBusBroker
   ( main,
   )
 where
@@ -41,7 +41,7 @@ import DBus.Client
   )
 import DBus.Internal.Message (Signal (..))
 import Data.Text (pack)
-import Network.MailNotifier.Utils
+import MailNotifier.Utils
   ( atomicallyTimeoutUntilFail_,
     busName,
     interface,

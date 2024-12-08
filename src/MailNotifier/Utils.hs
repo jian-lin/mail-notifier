@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Network.MailNotifier.Utils
+module MailNotifier.Utils
   ( AccountName,
     Server,
     atomicallyTimeoutUntilFail_,

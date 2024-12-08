@@ -1,6 +1,6 @@
 module Main where
 
-import qualified Network.MailNotifier.DBusBroker (main)
+import qualified MailNotifier.DBusBroker (main)
 
 main :: IO ()
-main = Network.MailNotifier.DBusBroker.main
+main = MailNotifier.DBusBroker.main
