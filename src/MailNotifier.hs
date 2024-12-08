@@ -46,17 +46,6 @@ import Data.List.NonEmpty (NonEmpty, (<|))
 import qualified Data.List.NonEmpty as NL (toList)
 import Data.Maybe (isNothing)
 import Data.Text (pack)
-import Network.HaskellNet.IMAP.Connection (IMAPConnection, exists)
-import Network.HaskellNet.IMAP.SSL
-  ( Settings (..),
-    capability,
-    defaultSettingsIMAPSSL,
-    idle,
-    list,
-    login,
-    select,
-  )
-import Network.HaskellNet.IMAP.Types (MailboxName)
 import MailNotifier.Utils
   ( AccountName,
     Server,
@@ -70,6 +59,17 @@ import MailNotifier.Utils
     withDBus,
     withImap,
   )
+import Network.HaskellNet.IMAP.Connection (IMAPConnection, exists)
+import Network.HaskellNet.IMAP.SSL
+  ( Settings (..),
+    capability,
+    defaultSettingsIMAPSSL,
+    idle,
+    list,
+    login,
+    select,
+  )
+import Network.HaskellNet.IMAP.Types (MailboxName)
 import Options.Applicative
   ( Parser,
     argument,
