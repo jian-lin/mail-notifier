@@ -2,34 +2,64 @@
   outputs =
     { self, nixpkgs }:
     let
+      projectName = "mail-notifier";
+
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-      myPkg =
-        pkgs: returnShellEnv:
-        pkgs.haskellPackages.developPackage {
-          root = ./.;
-          inherit returnShellEnv;
-        };
+      pkgs = import nixpkgs {
+        inherit system;
+        config = { };
+        overlays = [ self.overlays.default ];
+      };
+      inherit (pkgs) haskellPackages;
     in
     {
-      devShells.${system}.default = pkgs.mkShellNoCC {
-        inputsFrom = [ (myPkg pkgs true) ];
-        packages = with pkgs; [
-          nixfmt-rfc-style
-          # TODO should we put haskell-related tools into myPkgs to ensure version compatibility
-          # check how haskell-flake (by srid) does this
-          cabal-install
-          haskell-language-server
-        ];
+      formatter.${system} = nixpkgs.legacyPackages.${system}.nixfmt-rfc-style;
+      overlays.default = final: prev: {
+        haskellPackages = prev.haskellPackages.override (args: {
+          overrides = final.lib.composeExtensions args.overrides (
+            let
+              hlib = final.haskell.lib.compose;
+            in
+            hfinal: hprev: {
+              ${projectName} =
+                let
+                  # filter out haskell-unrelated files to avoid unnecessary rebuilds
+                  src = builtins.path {
+                    path = ./.;
+                    # NOTE setting name is important because the default one contains
+                    # the store path of this flake, which defeats the motivation
+                    name = "source";
+                    filter =
+                      path: type:
+                      !builtins.elem (builtins.baseNameOf path) [
+                        "flake.nix"
+                        "flake.lock"
+                        ".envrc"
+                      ];
+                  };
+                in
+                hfinal.callCabal2nix projectName src { };
+            }
+          );
+        });
       };
-      packages.${system} = {
-        default = pkgs.haskell.lib.compose.justStaticExecutables (myPkg pkgs false);
-        full = myPkg pkgs false;
-      };
-      overlays = {
-        default = final: prev: {
-          mail-notifier = final.haskell.lib.compose.justStaticExecutables (myPkg prev false);
-        };
+      packages.${system}.default = haskellPackages.generateOptparseApplicativeCompletions [
+        "mail-notifier"
+      ] (pkgs.haskell.lib.compose.justStaticExecutables haskellPackages.${projectName});
+      devShells.${system}.default = haskellPackages.shellFor {
+        packages = hpkgs: [ hpkgs.${projectName} ];
+        nativeBuildInputs =
+          (with haskellPackages; [
+            cabal-install
+            cabal-fmt
+            ghcid
+            haskell-language-server
+          ])
+          ++ (with pkgs; [
+            nixfmt-rfc-style
+          ]);
+        withHoogle = true;
+        doBenchmark = true;
       };
     };
 }
