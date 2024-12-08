@@ -38,8 +38,8 @@ library
     MailNotifier.DBusBroker
     MailNotifier.Utils
 
-  other-modules:    PackageInfo_mail_notifier
-  autogen-modules:  PackageInfo_mail_notifier
+  -- other-modules:    PackageInfo_mail_notifier
+  -- autogen-modules:  PackageInfo_mail_notifier
 
   -- other-extensions:
   build-depends:

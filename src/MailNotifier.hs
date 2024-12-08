@@ -46,7 +46,6 @@ import Data.List.NonEmpty (NonEmpty, (<|))
 import qualified Data.List.NonEmpty as NL (toList)
 import Data.Maybe (isNothing)
 import Data.Text (pack)
-import Data.Version (showVersion)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection, exists)
 import Network.HaskellNet.IMAP.SSL
   ( Settings (..),
@@ -92,7 +91,6 @@ import Options.Applicative
     (<**>),
   )
 import Options.Applicative.NonEmpty (some1)
-import PackageInfo_mail_notifier (synopsis, version)
 import System.Environment (lookupEnv)
 import System.IO (BufferMode (..), hSetBuffering, stdout)
 import System.Process (readProcess)
@@ -445,12 +443,13 @@ argsParser =
           <> help "Log level"
       )
 
+-- TODO use synopsis and version from PackageInfo_mail_notifier when cabal2nix supports cabal-version 3.12
 parseArgs :: IO Args
 parseArgs =
   execParser $
     info
-      (argsParser <**> helper <**> simpleVersioner (showVersion version))
-      (fullDesc <> progDesc synopsis)
+      (argsParser <**> helper <**> simpleVersioner "0.1.0.0")
+      (fullDesc <> progDesc "A tool to immediately run mbsync and notify your MUA for new mails")
 
 main :: IO ()
 main = do
