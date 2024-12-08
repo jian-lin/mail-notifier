@@ -36,18 +36,14 @@ import Colog
   )
 import Control.Concurrent (ThreadId)
 import Control.Concurrent.Async (Concurrently (..))
-import Control.Concurrent.STM (STM, atomically, check, orElse, readTVar, registerDelay)
+import Control.Concurrent.STM (check, orElse, registerDelay)
 import Control.Exception (bracket)
-import Control.Monad ((<=<))
-import Control.Monad.IO.Class (MonadIO)
 import DBus (BusName, MemberName, ObjectPath)
 import DBus.Client (Client, connectSystem, disconnect)
 import DBus.Internal.Types (InterfaceName)
-import Data.Foldable (asum, toList)
-import Data.Text (Text)
-import Data.Text.Encoding (encodeUtf8)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
+import Relude
 
 atomicallyTimeout :: Int -> STM a -> IO (Maybe a)
 atomicallyTimeout microsecond action = do
@@ -59,7 +55,7 @@ atomicallyTimeoutUntilFail_ microsecond action = do
   result <- atomicallyTimeout microsecond action
   case result of
     Just _ -> atomicallyTimeoutUntilFail_ microsecond action
-    Nothing -> return ()
+    Nothing -> pure ()
 
 type Server = String
 
@@ -81,7 +77,7 @@ interface = "tech.linj.MailNotifier"
 type AccountName = String
 
 raceMany :: (Foldable t) => t (IO a) -> IO a
-raceMany actions = runConcurrently $ asum $ map Concurrently $ toList actions
+raceMany actions = runConcurrently $ asum $ Concurrently <$> toList actions
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message
 mkLogAction severity =
@@ -99,8 +95,8 @@ mkLogAction severity =
       -- modified from richMessageAction
       logAction :: (MonadIO m) => LogAction m Message
       logAction =
-        upgradeMessageAction defaultFieldMap $
-          cmapM (fmap encodeUtf8 . fmtRichMessage) logByteStringStdout
+        upgradeMessageAction defaultFieldMap
+          $ cmapM (fmap encodeUtf8 . fmtRichMessage) logByteStringStdout
    in filterBySeverity severity msgSeverity logAction
 
 syncNotificationMethodName :: MemberName

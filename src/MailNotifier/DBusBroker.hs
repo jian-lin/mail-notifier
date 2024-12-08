@@ -13,10 +13,6 @@ import Colog
   )
 import Control.Concurrent.STM (TBQueue, newTBQueue, readTBQueue, writeTBQueue)
 import Control.Exception (throwIO)
-import Control.Monad (forever, when)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, ReaderT (..), asks)
-import Control.Monad.STM (atomically)
 import DBus (MemberName)
 import DBus.Client
   ( Client,
@@ -32,7 +28,6 @@ import DBus.Client
     requestName,
   )
 import DBus.Internal.Message (Signal (..))
-import Data.Text (pack)
 import MailNotifier.Utils
   ( atomicallyTimeoutUntilFail_,
     busName,
@@ -41,7 +36,7 @@ import MailNotifier.Utils
     objectPath,
     withDBus,
   )
-import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
+import Relude
 
 type Queue = TBQueue ()
 
@@ -63,7 +58,7 @@ emitSignal client = forever $ do
             signalBody = []
           }
   liftIO $ emit client signal
-  logInfo $ "emitted a " <> pack (show signalName) <> " signal: " <> pack (show signal)
+  logInfo $ "emitted a " <> show signalName <> " signal: " <> show signal
 
 -- TODO try to add some log
 getSyncNotification :: Queue -> IO ()
@@ -71,29 +66,29 @@ getSyncNotification queue = atomically $ writeTBQueue queue ()
 
 app :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m ()
 app client = do
-  logInfo $ "try to request " <> pack (show busName)
+  logInfo $ "try to request " <> show busName
   reply <- liftIO $ requestName client busName [nameDoNotQueue]
   liftIO $ when (reply /= NamePrimaryOwner) $ do
     throwIO $ clientError $ "failed to request " <> show busName <> ": " <> show reply
-  logInfo $ "requested " <> pack (show busName)
+  logInfo $ "requested " <> show busName
   queue <- asks getQueue
   let methodName :: MemberName
       methodName = "Notify"
-  liftIO $
-    export
+  liftIO
+    $ export
       client
       objectPath
       defaultInterface
         { interfaceName = interface,
           interfaceMethods = [autoMethod methodName (getSyncNotification queue)]
         }
-  logInfo $
-    "exported method "
-      <> pack (show methodName)
-      <> " at "
-      <> pack (show objectPath)
-      <> " "
-      <> pack (show interface)
+  logInfo
+    $ "exported method "
+    <> show methodName
+    <> " at "
+    <> show objectPath
+    <> " "
+    <> show interface
   logInfo "wait for sync notifications"
   emitSignal client
 

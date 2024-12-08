@@ -1,6 +1,7 @@
 module Main where
 
-import qualified MailNotifier (main)
+import MailNotifier qualified (main)
+import Relude
 
 main :: IO ()
 main = MailNotifier.main
