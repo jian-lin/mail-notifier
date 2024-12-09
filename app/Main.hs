@@ -80,7 +80,7 @@ argsParser =
           <> O.metavar "LOG-LEVEL"
           <> O.showDefault
           <> O.value Info
-          <> O.help "Log level"
+          <> O.help (show [minBound :: Severity ..])
       )
 
 -- TODO use synopsis and version from PackageInfo_mail_notifier when cabal2nix supports cabal-version 3.12
