@@ -9,7 +9,6 @@ module MailNotifier.Utils
     interface,
     mkLogAction,
     objectPath,
-    raceMany,
     syncNotificationMethodName,
     withDBus,
     withImap,
@@ -41,8 +40,7 @@ import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
 import UnliftIO
-  ( Concurrently (..),
-    MonadUnliftIO,
+  ( MonadUnliftIO,
     bracket,
     checkSTM,
     orElse,
@@ -86,9 +84,6 @@ interface :: InterfaceName
 interface = "tech.linj.MailNotifier"
 
 type AccountName = String
-
-raceMany :: (Foldable t, MonadUnliftIO m) => t (m a) -> m a
-raceMany actions = runConcurrently $ asum $ Concurrently <$> toList actions
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message
 mkLogAction severity =

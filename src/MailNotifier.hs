@@ -29,7 +29,6 @@ import MailNotifier.Utils
     interface,
     mkLogAction,
     objectPath,
-    raceMany,
     syncNotificationMethodName,
     withDBus,
     withImap,
@@ -67,7 +66,7 @@ import Options.Applicative
 import Options.Applicative.NonEmpty (some1)
 import Relude hiding (getArgs) -- FIXME
 import System.Systemd.Daemon (notifyWatchdog)
-import UnliftIO (MonadUnliftIO, TBQueue, newTBQueue, readTBQueue, writeTBQueue)
+import UnliftIO (MonadUnliftIO, TBQueue, mapConcurrently_, newTBQueue, readTBQueue, writeTBQueue)
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcess)
 
@@ -288,7 +287,7 @@ app = do
           }
       watchOneMailbox mailbox =
         withImap args.server imapSettings (watch password mailbox)
-  raceMany $ withDBus sync <| watchdog <| fmap watchOneMailbox args.mailboxes
+  mapConcurrently_ id $ withDBus sync <| watchdog <| fmap watchOneMailbox args.mailboxes
 
 data Args = Args
   { accountName :: !AccountName,
