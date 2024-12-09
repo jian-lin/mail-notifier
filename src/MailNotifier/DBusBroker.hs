@@ -86,7 +86,7 @@ data Env m = Env
   }
 
 newtype App a = App {runApp :: ReaderT (Env App) IO a}
-  deriving (Functor, Applicative, Monad, MonadReader (Env App), MonadIO)
+  deriving newtype (Functor, Applicative, Monad, MonadReader (Env App), MonadIO)
 
 instance HasLog (Env m) Message m where
   getLogAction :: Env m -> LogAction m Message

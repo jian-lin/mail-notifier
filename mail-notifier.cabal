@@ -33,6 +33,7 @@ common deps
     , unliftio              ^>=0.2.25.0
 
   default-extensions:
+    DerivingStrategies
     NoImplicitPrelude
     OverloadedStrings
 

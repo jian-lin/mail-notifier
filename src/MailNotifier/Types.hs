@@ -29,7 +29,7 @@ data Args = Args
     pollInterval :: !Int,
     logLevel :: !Severity
   }
-  deriving (Show)
+  deriving stock (Show)
 
 data Env m = Env
   { envLogAction :: !(LogAction m Message),
