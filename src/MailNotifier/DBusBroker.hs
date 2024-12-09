@@ -11,8 +11,6 @@ import Colog
     WithLog,
     logInfo,
   )
-import Control.Concurrent.STM (TBQueue, newTBQueue, readTBQueue, writeTBQueue)
-import Control.Exception (throwIO)
 import DBus (MemberName)
 import DBus.Client
   ( Client,
@@ -37,6 +35,7 @@ import MailNotifier.Utils
     withDBus,
   )
 import Relude
+import UnliftIO (TBQueue, newTBQueue, readTBQueue, throwIO, writeTBQueue)
 
 type Queue = TBQueue ()
 
@@ -68,7 +67,7 @@ app :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m ()
 app client = do
   logInfo $ "try to request " <> show busName
   reply <- liftIO $ requestName client busName [nameDoNotQueue]
-  liftIO $ when (reply /= NamePrimaryOwner) $ do
+  when (reply /= NamePrimaryOwner) $ do
     throwIO $ clientError $ "failed to request " <> show busName <> ": " <> show reply
   logInfo $ "requested " <> show busName
   queue <- asks getQueue

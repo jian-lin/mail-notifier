@@ -34,21 +34,27 @@ import Colog
     showTime,
     upgradeMessageAction,
   )
-import Control.Concurrent (ThreadId)
-import Control.Concurrent.Async (Concurrently (..))
-import Control.Concurrent.STM (check, orElse, registerDelay)
-import Control.Exception (bracket)
 import DBus (BusName, MemberName, ObjectPath)
 import DBus.Client (Client, connectSystem, disconnect)
 import DBus.Internal.Types (InterfaceName)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
+import UnliftIO
+  ( Concurrently (..),
+    MonadUnliftIO,
+    bracket,
+    checkSTM,
+    orElse,
+    registerDelay,
+    withRunInIO,
+  )
+import UnliftIO.Concurrent (ThreadId)
 
 atomicallyTimeout :: Int -> STM a -> IO (Maybe a)
 atomicallyTimeout microsecond action = do
   timer <- registerDelay microsecond
-  atomically $ (Just <$> action) `orElse` (Nothing <$ (check <=< readTVar) timer)
+  atomically $ (Just <$> action) `orElse` (Nothing <$ (checkSTM <=< readTVar) timer)
 
 atomicallyTimeoutUntilFail_ :: Int -> STM a -> IO ()
 atomicallyTimeoutUntilFail_ microsecond action = do
@@ -59,11 +65,16 @@ atomicallyTimeoutUntilFail_ microsecond action = do
 
 type Server = String
 
-withImap :: Server -> Settings -> (IMAPConnection -> IO ()) -> IO ()
-withImap server settings = bracket (connectIMAPSSLWithSettings server settings) logout
+withImap :: (MonadUnliftIO m) => Server -> Settings -> (IMAPConnection -> m ()) -> m ()
+withImap server settings action = withRunInIO $ \runInIO ->
+  bracket
+    (connectIMAPSSLWithSettings server settings)
+    logout
+    (runInIO . action)
 
-withDBus :: (Client -> IO ()) -> IO ()
-withDBus = bracket connectSystem disconnect
+withDBus :: (MonadUnliftIO m) => (Client -> m ()) -> m ()
+withDBus action = withRunInIO $ \runInIO ->
+  bracket connectSystem disconnect (runInIO . action)
 
 busName :: BusName
 busName = "tech.linj.MailNotifier"
@@ -76,7 +87,7 @@ interface = "tech.linj.MailNotifier"
 
 type AccountName = String
 
-raceMany :: (Foldable t) => t (IO a) -> IO a
+raceMany :: (Foldable t, MonadUnliftIO m) => t (m a) -> m a
 raceMany actions = runConcurrently $ asum $ Concurrently <$> toList actions
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message

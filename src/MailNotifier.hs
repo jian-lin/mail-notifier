@@ -15,13 +15,6 @@ import Colog
     logInfo,
     logWarning,
   )
-import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM
-  ( TBQueue,
-    newTBQueue,
-    readTBQueue,
-    writeTBQueue,
-  )
 import DBus (MethodCall (methodCallDestination), methodCall)
 import DBus.Client (Client, call_)
 import Data.Char (toUpper)
@@ -73,8 +66,10 @@ import Options.Applicative
   )
 import Options.Applicative.NonEmpty (some1)
 import Relude hiding (getArgs) -- FIXME
-import System.Process (readProcess)
 import System.Systemd.Daemon (notifyWatchdog)
+import UnliftIO (MonadUnliftIO, TBQueue, newTBQueue, readTBQueue, writeTBQueue)
+import UnliftIO.Concurrent (threadDelay)
+import UnliftIO.Process (readProcess)
 
 -- TODO patch HaskellNetSSL to replace connection with crypton-connection
 -- https://github.com/dpwright/HaskellNet-SSL/pull/34/files
@@ -99,11 +94,11 @@ type Password = String
 -- Two exceptions I can think of are (1) the password is changed and (2) the mailbox is deleted.
 watch ::
   (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env, HasWatchdogState env) =>
-  IMAPConnection ->
   Password ->
   MailboxName ->
+  IMAPConnection ->
   m ()
-watch conn password accountMailbox = do
+watch password accountMailbox conn = do
   logInfo $ "watch " <> toText accountMailbox
   args <- asks getArgs
   liftIO $ login conn args.username password
@@ -128,20 +123,20 @@ watch conn password accountMailbox = do
           then idle conn args.idleTimeout
           else threadDelay args.pollInterval
   logInfo $ "enter watchLoop, " <> if supportIdle then "use IDLE" else "fallback to poll"
-  watchLoop mailNum watchAwhile getMailNum accountMailbox
+  watchLoop mailNum (liftIO watchAwhile) (liftIO getMailNum) accountMailbox
 
 watchLoop ::
   (WithLog env Message m, MonadIO m, HasSyncJobQueue env, HasWatchdogState env) =>
   Integer ->
-  IO () ->
-  IO Integer ->
+  m () ->
+  m Integer ->
   MailboxName ->
   m ()
 watchLoop mailNum watchAwhile getMailNum accountMailbox = do
   watchdogState <- asks ((HM.! accountMailbox) . getWatchdogState)
   _ <- liftIO $ atomically $ tryPutTMVar watchdogState ()
-  liftIO watchAwhile
-  newMailNum <- liftIO getMailNum
+  watchAwhile
+  newMailNum <- getMailNum
   syncJobQueue <- asks getSyncJobQueue
   if newMailNum == mailNum
     then do
@@ -261,10 +256,18 @@ warnArgs = do
     Nothing -> pure ()
 
 -- TODO split env in ReaderT of sync and watch according to the "Next Level MTL" video
--- TODO can we put withDBus into sync function? (also withImap)
-app :: App ()
+app ::
+  ( HasArgs env,
+    HasWatchdogState env,
+    HasSyncJobQueue env,
+    WithLog env Message m,
+    MonadReader env m,
+    MonadIO m,
+    MonadUnliftIO m
+  ) =>
+  m ()
 app = do
-  args <- asks envArgs
+  args <- asks getArgs
   logDebug $ show args
   -- TODO is it better to: bracket openFile hClose $ \h -> ...
   -- what happens if readFile fails in the process of reading an opened file? will file be closed?
@@ -277,25 +280,15 @@ app = do
     <> show objectPath
     <> " "
     <> show interface
-  env <- ask
-  let syncThread :: IO ()
-      syncThread = withDBus $ \client -> run env (sync client)
-      -- NOTE setting sslLogToConsole to True will print your password in clear text!
-      imapSettings :: Settings
-      imapSettings = defaultSettingsIMAPSSL {sslMaxLineLength = 100_000, sslLogToConsole = False}
-      watchThreads :: NonEmpty (IO ())
-      watchThreads =
-        fmap
-          ( \mailbox ->
-              withImap
-                args.server
-                imapSettings
-                (\conn -> run env (watch conn password mailbox))
-          )
-          args.mailboxes
-      watchdogThread :: IO ()
-      watchdogThread = run env watchdog
-  liftIO $ raceMany $ syncThread <| watchdogThread <| watchThreads
+  let imapSettings =
+        defaultSettingsIMAPSSL
+          { sslMaxLineLength = 100_000,
+            -- NOTE setting sslLogToConsole to True will print your password in clear text!
+            sslLogToConsole = False
+          }
+      watchOneMailbox mailbox =
+        withImap args.server imapSettings (watch password mailbox)
+  raceMany $ withDBus sync <| watchdog <| fmap watchOneMailbox args.mailboxes
 
 data Args = Args
   { accountName :: !AccountName,
@@ -319,7 +312,7 @@ data Env m = Env
   }
 
 newtype App a = App {runApp :: ReaderT (Env App) IO a}
-  deriving (Functor, Applicative, Monad, MonadReader (Env App), MonadIO)
+  deriving (Functor, Applicative, Monad, MonadReader (Env App), MonadIO, MonadUnliftIO)
 
 instance HasLog (Env m) Message m where
   getLogAction :: Env m -> LogAction m Message
