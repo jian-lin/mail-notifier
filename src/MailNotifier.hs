@@ -18,7 +18,6 @@ import DBus.Client (Client, call_)
 import Data.Char (toUpper)
 import Data.HashMap.Strict qualified as HM (elems, fromList, (!))
 import Data.List.NonEmpty ((<|))
-import Data.List.NonEmpty qualified as NL (toList)
 import MailNotifier.Utils
   ( AccountName,
     Server,
@@ -439,7 +438,7 @@ main = do
         Env
           { envLogAction = mkLogAction $ logLevel args,
             envSyncJobQueue = syncJobQueue,
-            envWatchdogState = HM.fromList $ zip (NL.toList $ mailboxes args) vs,
+            envWatchdogState = HM.fromList $ zip (toList $ mailboxes args) vs,
             envArgs = args
           }
   foldMap absurd <$> run env app
