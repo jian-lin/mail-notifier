@@ -49,6 +49,7 @@ library
     MailNotifier.App
     MailNotifier.DBus
     MailNotifier.DBusBroker
+    MailNotifier.Exception
     MailNotifier.Mail
     MailNotifier.Types
     MailNotifier.Utils

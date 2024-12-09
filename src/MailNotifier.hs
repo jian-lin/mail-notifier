@@ -3,13 +3,14 @@ module MailNotifier (app) where
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
 import Data.List.NonEmpty ((<|))
 import MailNotifier.DBus (sync)
+import MailNotifier.Exception
 import MailNotifier.Mail (watch)
 import MailNotifier.Types
 import MailNotifier.Utils (busName, interface, objectPath, withDBus, withImap)
 import MailNotifier.Watchdog (watchdog)
 import Network.HaskellNet.IMAP.SSL (Settings (..), defaultSettingsIMAPSSL)
 import Relude hiding (getArgs) -- FIXME
-import UnliftIO (MonadUnliftIO, mapConcurrently)
+import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
 
 -- TODO patch HaskellNetSSL to replace connection with crypton-connection
 -- https://github.com/dpwright/HaskellNet-SSL/pull/34/files
@@ -53,7 +54,6 @@ app ::
     HasSyncJobQueue env,
     WithLog env Message m,
     MonadReader env m,
-    MonadIO m,
     MonadUnliftIO m
   ) =>
   m (NonEmpty Void)
@@ -62,21 +62,24 @@ app = do
   logDebug $ show args
   -- TODO is it better to: bracket openFile hClose $ \h -> ...
   -- what happens if readFile fails in the process of reading an opened file? will file be closed?
-  password <- liftIO $ readFile $ passwordFile args
-  warnArgs
-  logInfo
-    $ "DBus: "
-    <> show busName
-    <> " "
-    <> show objectPath
-    <> " "
-    <> show interface
-  let imapSettings =
-        defaultSettingsIMAPSSL
-          { sslMaxLineLength = 100_000,
-            -- NOTE setting sslLogToConsole to True will print your password in clear text!
-            sslLogToConsole = False
-          }
-      watchOneMailbox mailbox =
-        withImap (server args) imapSettings (watch password mailbox)
-  mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes args)
+  ePassword <- decodeUtf8' <$> readFileBS (passwordFile args)
+  case ePassword of
+    Left err -> throwIO $ PasswordDecodeException err
+    Right password -> do
+      warnArgs
+      logInfo
+        $ "DBus: "
+        <> show busName
+        <> " "
+        <> show objectPath
+        <> " "
+        <> show interface
+      let imapSettings =
+            defaultSettingsIMAPSSL
+              { sslMaxLineLength = 100_000,
+                -- NOTE setting sslLogToConsole to True will print your password in clear text!
+                sslLogToConsole = False
+              }
+          watchOneMailbox mailbox =
+            withImap (server args) imapSettings (watch (toString password) mailbox)
+      mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes args)
