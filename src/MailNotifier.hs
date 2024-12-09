@@ -66,7 +66,7 @@ import Options.Applicative
 import Options.Applicative.NonEmpty (some1)
 import Relude hiding (getArgs) -- FIXME
 import System.Systemd.Daemon (notifyWatchdog)
-import UnliftIO (MonadUnliftIO, TBQueue, mapConcurrently_, newTBQueue, readTBQueue, writeTBQueue)
+import UnliftIO (MonadUnliftIO, TBQueue, mapConcurrently, newTBQueue, readTBQueue, writeTBQueue)
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcess)
 
@@ -96,7 +96,7 @@ watch ::
   Password ->
   MailboxName ->
   IMAPConnection ->
-  m ()
+  m Void
 watch password accountMailbox conn = do
   logInfo $ "watch " <> toText accountMailbox
   args <- asks getArgs
@@ -130,7 +130,7 @@ watchLoop ::
   m () ->
   m Integer ->
   MailboxName ->
-  m ()
+  m Void
 watchLoop mailNum watchAwhile getMailNum accountMailbox = do
   watchdogState <- asks ((HM.! accountMailbox) . getWatchdogState)
   _ <- liftIO $ atomically $ tryPutTMVar watchdogState ()
@@ -157,7 +157,7 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
 sync ::
   (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env) =>
   Client ->
-  m ()
+  m Void
 sync client = do
   args <- asks getArgs
   logInfo "wait for sync jobs"
@@ -210,7 +210,7 @@ notify client = do
 
 watchdog ::
   (WithLog env Message m, MonadIO m, HasWatchdogState env, HasArgs env) =>
-  m ()
+  m Void
 watchdog = do
   args <- asks getArgs
   let mailboxNum = length args.mailboxes
@@ -264,7 +264,7 @@ app ::
     MonadIO m,
     MonadUnliftIO m
   ) =>
-  m ()
+  m (NonEmpty Void)
 app = do
   args <- asks getArgs
   logDebug $ show args
@@ -287,7 +287,7 @@ app = do
           }
       watchOneMailbox mailbox =
         withImap args.server imapSettings (watch password mailbox)
-  mapConcurrently_ id $ withDBus sync <| watchdog <| fmap watchOneMailbox args.mailboxes
+  mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox args.mailboxes
 
 data Args = Args
   { accountName :: !AccountName,
@@ -446,4 +446,4 @@ main = do
             envWatchdogState = HM.fromList $ zip (NL.toList args.mailboxes) vs,
             envArgs = args
           }
-  run env app
+  foldMap absurd <$> run env app

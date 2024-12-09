@@ -63,14 +63,14 @@ atomicallyTimeoutUntilFail_ microsecond action = do
 
 type Server = String
 
-withImap :: (MonadUnliftIO m) => Server -> Settings -> (IMAPConnection -> m ()) -> m ()
+withImap :: (MonadUnliftIO m) => Server -> Settings -> (IMAPConnection -> m a) -> m a
 withImap server settings action = withRunInIO $ \runInIO ->
   bracket
     (connectIMAPSSLWithSettings server settings)
     logout
     (runInIO . action)
 
-withDBus :: (MonadUnliftIO m) => (Client -> m ()) -> m ()
+withDBus :: (MonadUnliftIO m) => (Client -> m a) -> m a
 withDBus action = withRunInIO $ \runInIO ->
   bracket connectSystem disconnect (runInIO . action)
 

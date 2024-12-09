@@ -39,8 +39,8 @@ import UnliftIO (TBQueue, newTBQueue, readTBQueue, throwIO, writeTBQueue)
 
 type Queue = TBQueue ()
 
-emitSignal :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m ()
-emitSignal client = forever $ do
+emitSignal :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
+emitSignal client = infinitely $ do
   queue <- asks getQueue
   _ <- liftIO $ atomically $ readTBQueue queue
   liftIO $ atomicallyTimeoutUntilFail_ 1_000_000 $ readTBQueue queue
@@ -63,7 +63,7 @@ emitSignal client = forever $ do
 getSyncNotification :: Queue -> IO ()
 getSyncNotification queue = atomically $ writeTBQueue queue ()
 
-app :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m ()
+app :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
 app client = do
   logInfo $ "try to request " <> show busName
   reply <- liftIO $ requestName client busName [nameDoNotQueue]
@@ -129,4 +129,4 @@ main = do
           { envLogAction = mkLogAction Info,
             envQueue = queue
           }
-  withDBus $ \client -> run env (app client)
+  fmap absurd $ withDBus $ \client -> run env (app client)
