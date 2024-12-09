@@ -100,8 +100,7 @@ main = do
       queueSize = 3 * fromInteger (toInteger mailboxNum)
   syncJobQueue <- atomically $ newTBQueue queueSize
   vs <- atomically $ replicateM mailboxNum newEmptyTMVar
-  let env :: Env App
-      env =
+  let env =
         Env
           { envLogAction = mkLogAction $ logLevel args,
             envSyncJobQueue = syncJobQueue,

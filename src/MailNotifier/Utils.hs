@@ -14,7 +14,6 @@ module MailNotifier.Utils
   )
 where
 
-import Chronos (Time)
 import Colog
   ( LogAction,
     Message,
@@ -40,7 +39,6 @@ import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
-import UnliftIO.Concurrent (ThreadId)
 
 atomicallyTimeout :: (MonadIO m) => Int -> STM a -> m (Maybe a)
 atomicallyTimeout microsecond action = do
@@ -79,8 +77,7 @@ mkLogAction severity =
   let -- modified from fmtRichMessageDefault
       fmtRichMessage :: (MonadIO m) => RichMessage m -> m Text
       fmtRichMessage richMsg =
-        let formatRichMessage :: Maybe ThreadId -> Maybe Time -> Message -> Text
-            formatRichMessage (maybe "" showThreadId -> thread) (maybe "" showTime -> time) msg =
+        let formatRichMessage (maybe "" showThreadId -> thread) (maybe "" showTime -> time) msg =
               showSeverity (msgSeverity msg)
                 <> (if severity <= Debug then time else mempty)
                 <> (if severity <= Debug then showSourceLoc (msgStack msg) else mempty)

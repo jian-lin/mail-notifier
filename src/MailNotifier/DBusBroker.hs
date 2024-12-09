@@ -7,7 +7,6 @@ module MailNotifier.DBusBroker
 where
 
 import Colog (HasLog (..), LogAction, Message, WithLog, logInfo)
-import DBus (MemberName)
 import DBus.Client
   ( Client,
     RequestNameReply (NamePrimaryOwner),
@@ -33,9 +32,7 @@ emitSignal client = infinitely $ do
   queue <- asks getQueue
   _ <- atomically $ readTBQueue queue
   atomicallyTimeoutUntilFail_ 1_000_000 $ readTBQueue queue
-  let signalName :: MemberName
-      signalName = "Synced"
-      signal :: Signal
+  let signalName = "Synced"
       signal =
         Signal
           { signalPath = objectPath,
@@ -60,8 +57,7 @@ app client = do
     throwIO $ clientError $ "failed to request " <> show busName <> ": " <> show reply
   logInfo $ "requested " <> show busName
   queue <- asks getQueue
-  let methodName :: MemberName
-      methodName = "Notify"
+  let methodName = "Notify"
   liftIO
     $ export
       client

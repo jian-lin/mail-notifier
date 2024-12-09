@@ -34,15 +34,12 @@ watch password accountMailbox conn = do
   logDebug $ "mailboxes: " <> show allMailboxes
   liftIO $ select conn accountMailbox
   logDebug $ "selected " <> toText accountMailbox
-  let getMailNum :: IO Integer
-      getMailNum = exists conn
+  let getMailNum = exists conn
   mailNum <- liftIO getMailNum
   logInfo $ show mailNum <> " mails in " <> toText accountMailbox
   syncJobQueue <- asks getSyncJobQueue
   atomically $ writeTBQueue syncJobQueue () -- initial sync job
-  let supportIdle :: Bool
-      supportIdle = "IDLE" `elem` (toUpper <<$>> capabilities) -- assume case-insensitive
-      watchAwhile :: IO ()
+  let supportIdle = "IDLE" `elem` (toUpper <<$>> capabilities) -- assume case-insensitive
       watchAwhile =
         if supportIdle
           then idle conn (idleTimeout args)
