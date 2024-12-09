@@ -1,9 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module MailNotifier.Utils
-  ( AccountName,
-    Server,
-    atomicallyTimeoutUntilFail_,
+  ( atomicallyTimeoutUntilFail_,
     busName,
     interface,
     mkLogAction,
