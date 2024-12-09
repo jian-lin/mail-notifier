@@ -61,12 +61,7 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
   newMailNum <- getMailNum
   syncJobQueue <- asks getSyncJobQueue
   if newMailNum == mailNum
-    then do
-      logDebug
-        $ toText accountMailbox
-        <> " has no new mail, still "
-        <> show mailNum
-      watchLoop mailNum watchAwhile getMailNum accountMailbox
+    then logDebug $ toText accountMailbox <> " has no new mail, still " <> show mailNum
     else do
       logInfo
         $ toText accountMailbox
@@ -75,4 +70,4 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
         <> " new mail(s), total "
         <> show mailNum
       atomically $ writeTBQueue (unSyncJobQueue syncJobQueue) ()
-      watchLoop newMailNum watchAwhile getMailNum accountMailbox
+  watchLoop newMailNum watchAwhile getMailNum accountMailbox
