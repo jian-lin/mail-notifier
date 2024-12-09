@@ -17,7 +17,7 @@ type AccountName = String
 
 type Server = String
 
-data Args = Args
+data Config = Config
   { accountName :: !AccountName,
     server :: !Server,
     username :: !Username,
@@ -35,7 +35,7 @@ data Env m = Env
   { envLogAction :: !(LogAction m Message),
     envSyncJobQueue :: !SyncJobQueue,
     envWatchdogState :: !WatchdogState,
-    envArgs :: !Args
+    envConfig :: !Config
   }
 
 instance HasLog (Env m) Message m where
@@ -47,14 +47,14 @@ instance HasLog (Env m) Message m where
   setLogAction newLogAction env = env {envLogAction = newLogAction}
   {-# INLINE setLogAction #-}
 
--- TODO are there better ways to do HasArgs, HasSyncJobQueue and HasWatchdogQueue?
-class HasArgs env where
-  getArgs :: env -> Args
+-- TODO are there better ways to do HasConfig, HasSyncJobQueue and HasWatchdogQueue?
+class HasConfig env where
+  getConfig :: env -> Config
 
-instance HasArgs (Env m) where
-  getArgs :: Env m -> Args
-  getArgs = envArgs
-  {-# INLINE getArgs #-}
+instance HasConfig (Env m) where
+  getConfig :: Env m -> Config
+  getConfig = envConfig
+  {-# INLINE getConfig #-}
 
 class HasSyncJobQueue env where
   getSyncJobQueue :: env -> SyncJobQueue

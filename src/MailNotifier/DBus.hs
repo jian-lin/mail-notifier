@@ -11,27 +11,27 @@ import MailNotifier.Utils
     objectPath,
     syncNotificationMethodName,
   )
-import Relude hiding (getArgs) -- FIXME
+import Relude
 import UnliftIO (readTBQueue)
 import UnliftIO.Process (readProcess)
 
 sync ::
-  (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env) =>
+  (WithLog env Message m, MonadIO m, HasConfig env, HasSyncJobQueue env) =>
   Client ->
   m Void
 sync client = infinitely $ do
-  args <- asks getArgs
+  config <- asks getConfig
   logInfo "wait for sync jobs"
   syncJobQueue <- asks getSyncJobQueue
   _ <- atomically $ readTBQueue syncJobQueue
-  atomicallyTimeoutUntilFail_ (readSyncJobsTimeout args) $ readTBQueue syncJobQueue
+  atomicallyTimeoutUntilFail_ (readSyncJobsTimeout config) $ readTBQueue syncJobQueue
   logInfo "got sync jobs, start to sync"
   output <-
     readProcess
       "/run/wrappers/bin/mbsyncSetuid"
       [ "--config",
-        mbsyncConfigFile args,
-        accountName args
+        mbsyncConfigFile config,
+        accountName config
       ]
       ""
   unless (null output)
@@ -41,7 +41,7 @@ sync client = infinitely $ do
 
 -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
 notify ::
-  (WithLog env Message m, MonadIO m, HasArgs env) =>
+  (WithLog env Message m, MonadIO m, HasConfig env) =>
   Client ->
   m ()
 notify client = do

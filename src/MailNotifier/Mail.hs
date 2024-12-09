@@ -7,7 +7,7 @@ import MailNotifier.Types
 import Network.HaskellNet.IMAP.Connection (IMAPConnection, exists)
 import Network.HaskellNet.IMAP.SSL (capability, idle, list, login, select)
 import Network.HaskellNet.IMAP.Types (MailboxName)
-import Relude hiding (getArgs) -- FIXME
+import Relude
 import UnliftIO (writeTBQueue)
 import UnliftIO.Concurrent (threadDelay)
 
@@ -18,15 +18,15 @@ import UnliftIO.Concurrent (threadDelay)
 -- So if it runs fine for a while, it should be restarted if crashes.
 -- Two exceptions I can think of are (1) the password is changed and (2) the mailbox is deleted.
 watch ::
-  (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env, HasWatchdogState env) =>
+  (WithLog env Message m, MonadIO m, HasConfig env, HasSyncJobQueue env, HasWatchdogState env) =>
   Password ->
   MailboxName ->
   IMAPConnection ->
   m Void
 watch password accountMailbox conn = do
   logInfo $ "watch " <> toText accountMailbox
-  args <- asks getArgs
-  liftIO $ login conn (username args) password
+  config <- asks getConfig
+  liftIO $ login conn (username config) password
   logDebug "logged in "
   capabilities <- liftIO $ capability conn
   logDebug $ "capabilities: " <> show capabilities
@@ -42,8 +42,8 @@ watch password accountMailbox conn = do
   let supportIdle = "IDLE" `elem` (toUpper <<$>> capabilities) -- assume case-insensitive
       watchAwhile =
         if supportIdle
-          then idle conn (idleTimeout args)
-          else threadDelay (pollInterval args)
+          then idle conn (idleTimeout config)
+          else threadDelay (pollInterval config)
   logInfo $ "enter watchLoop, " <> if supportIdle then "use IDLE" else "fallback to poll"
   watchLoop mailNum (liftIO watchAwhile) (liftIO getMailNum) accountMailbox
 

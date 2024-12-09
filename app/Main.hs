@@ -15,9 +15,9 @@ import UnliftIO (newTBQueue)
 -- TODO split this big parser into smaller ones and then compose those small ones
 -- TODO parse this more strict: positive integer within maxBound :: Int
 -- TODO maybe parse name more strict: non-empty
-argsParser :: Parser Args
-argsParser =
-  Args
+configParser :: Parser Config
+configParser =
+  Config
     <$> O.strOption
       ( O.long "account-name"
           <> O.metavar "ACCOUNT-NAME"
@@ -84,27 +84,27 @@ argsParser =
       )
 
 -- TODO use synopsis and version from PackageInfo_mail_notifier when cabal2nix supports cabal-version 3.12
-parseArgs :: IO Args
-parseArgs =
+parseConfig :: IO Config
+parseConfig =
   O.execParser
     $ O.info
-      (argsParser <**> O.helper <**> O.simpleVersioner "0.1.0.0")
+      (configParser <**> O.helper <**> O.simpleVersioner "0.1.0.0")
       (O.fullDesc <> O.progDesc "A tool to immediately run mbsync and notify your MUA for new mails")
 
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
-  args <- parseArgs
+  config <- parseConfig
   -- no exception raised from Integer -> Natural since mailboxes is NonEmpty
-  let mailboxNum = length $ mailboxes args
+  let mailboxNum = length $ mailboxes config
       queueSize = 3 * fromInteger (toInteger mailboxNum)
   syncJobQueue <- atomically $ newTBQueue queueSize
   vs <- atomically $ replicateM mailboxNum newEmptyTMVar
   let env =
         Env
-          { envLogAction = mkLogAction $ logLevel args,
+          { envLogAction = mkLogAction $ logLevel config,
             envSyncJobQueue = syncJobQueue,
-            envWatchdogState = HM.fromList $ zip (toList $ mailboxes args) vs,
-            envArgs = args
+            envWatchdogState = HM.fromList $ zip (toList $ mailboxes config) vs,
+            envConfig = config
           }
   foldMap absurd <$> run app env

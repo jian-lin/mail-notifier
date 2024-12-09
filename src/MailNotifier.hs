@@ -9,7 +9,7 @@ import MailNotifier.Types
 import MailNotifier.Utils (busName, interface, objectPath, withDBus, withImap)
 import MailNotifier.Watchdog (watchdog)
 import Network.HaskellNet.IMAP.SSL (Settings (..), defaultSettingsIMAPSSL)
-import Relude hiding (getArgs) -- FIXME
+import Relude
 import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
 
 -- TODO patch HaskellNetSSL to replace connection with crypton-connection
@@ -19,35 +19,35 @@ import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
 -- TODO handle exceptions (or not? do they worth being handling?)
 -- TODO add some doc string
 
-warnArgs :: (WithLog env Message m, MonadIO m, HasArgs env) => m ()
-warnArgs = do
-  args <- asks getArgs
+warnConfig :: (WithLog env Message m, MonadIO m, HasConfig env) => m ()
+warnConfig = do
+  config <- asks getConfig
 
   -- running an unbounded numbder of threads concurrently is a bad pattern
   -- since too many threads can cause resouces issues
   --   a server may limit number of connections from a single client
   --   a client may use up its memory (less likely in this case)
   --   a client may increase the overhead of its sheduler
-  let mailboxNum = length $ mailboxes args
+  let mailboxNum = length $ mailboxes config
   when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> show mailboxNum
 
   mWatchdogTimeoutString <- lookupEnv "WATCHDOG_USEC"
   case mWatchdogTimeoutString >>= readMaybe of
     Just watchdogTimeout ->
-      when (watchdogTimeout <= pollInterval args || watchdogTimeout <= (idleTimeout args * 1_000))
+      when (watchdogTimeout <= pollInterval config || watchdogTimeout <= (idleTimeout config * 1_000))
         $ logWarning
         $ "systemd WatchdogSec ("
         <> show watchdogTimeout
         <> ") is smaller than poll interval ("
-        <> show (pollInterval args)
+        <> show (pollInterval config)
         <> ") or idle timeout ("
-        <> show (idleTimeout args * 1_000)
+        <> show (idleTimeout config * 1_000)
         <> ") (unit: us)"
     Nothing -> pure ()
 
 -- TODO split env in ReaderT of sync and watch according to the "Next Level MTL" video
 app ::
-  ( HasArgs env,
+  ( HasConfig env,
     HasWatchdogState env,
     HasSyncJobQueue env,
     WithLog env Message m,
@@ -56,15 +56,15 @@ app ::
   ) =>
   m (NonEmpty Void)
 app = do
-  args <- asks getArgs
-  logDebug $ show args
+  config <- asks getConfig
+  logDebug $ show config
   -- TODO is it better to: bracket openFile hClose $ \h -> ...
   -- what happens if readFile fails in the process of reading an opened file? will file be closed?
-  ePassword <- decodeUtf8' <$> readFileBS (passwordFile args)
+  ePassword <- decodeUtf8' <$> readFileBS (passwordFile config)
   case ePassword of
     Left err -> throwIO $ PasswordDecodeException err
     Right password -> do
-      warnArgs
+      warnConfig
       logInfo
         $ "DBus: "
         <> show busName
@@ -79,5 +79,5 @@ app = do
                 sslLogToConsole = False
               }
           watchOneMailbox mailbox =
-            withImap (server args) imapSettings (watch (toString password) mailbox)
-      mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes args)
+            withImap (server config) imapSettings (watch (toString password) mailbox)
+      mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes config)
