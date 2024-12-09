@@ -158,7 +158,7 @@ sync ::
   (WithLog env Message m, MonadIO m, HasArgs env, HasSyncJobQueue env) =>
   Client ->
   m Void
-sync client = do
+sync client = infinitely $ do
   args <- asks getArgs
   logInfo "wait for sync jobs"
   syncJobQueue <- asks getSyncJobQueue
@@ -178,7 +178,6 @@ sync client = do
     $ logWarning ("sync output: " <> toText output) -- has warnings
   notify client
   logInfo "sent a synced notification"
-  sync client
 
 -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
 notify ::
@@ -211,7 +210,7 @@ notify client = do
 watchdog ::
   (WithLog env Message m, MonadIO m, HasWatchdogState env, HasArgs env) =>
   m Void
-watchdog = do
+watchdog = infinitely $ do
   args <- asks getArgs
   let mailboxNum = length args.mailboxes
   watchdogState <- asks getWatchdogState
@@ -224,7 +223,6 @@ watchdog = do
     <> if isNothing reply
       then "but watchdog is not enabled by systemd"
       else "sent watchdog to systemd"
-  watchdog
 
 warnArgs :: (WithLog env Message m, MonadIO m, HasArgs env) => m ()
 warnArgs = do
