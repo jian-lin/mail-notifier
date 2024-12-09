@@ -38,14 +38,7 @@ import DBus.Internal.Types (InterfaceName)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
-import UnliftIO
-  ( MonadUnliftIO,
-    bracket,
-    checkSTM,
-    orElse,
-    registerDelay,
-    withRunInIO,
-  )
+import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
 import UnliftIO.Concurrent (ThreadId)
 
 atomicallyTimeout :: Int -> STM a -> IO (Maybe a)
