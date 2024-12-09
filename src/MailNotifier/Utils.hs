@@ -35,6 +35,7 @@ import Colog
 import DBus (BusName, MemberName, ObjectPath)
 import DBus.Client (Client, connectSystem, disconnect)
 import DBus.Internal.Types (InterfaceName)
+import MailNotifier.Types
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
@@ -52,8 +53,6 @@ atomicallyTimeoutUntilFail_ microsecond action = do
   case result of
     Just _ -> atomicallyTimeoutUntilFail_ microsecond action
     Nothing -> pure ()
-
-type Server = String
 
 withImap :: (MonadUnliftIO m) => Server -> Settings -> (IMAPConnection -> m a) -> m a
 withImap server settings action = withRunInIO $ \runInIO ->
@@ -74,8 +73,6 @@ objectPath = "/tech/linj/MailNotifier"
 
 interface :: InterfaceName
 interface = "tech.linj.MailNotifier"
-
-type AccountName = String
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message
 mkLogAction severity =

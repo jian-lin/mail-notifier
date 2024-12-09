@@ -1,16 +1,12 @@
 module MailNotifier.DBusBroker
-  ( main,
+  ( app,
+    run,
+    Env (..),
+    App,
   )
 where
 
-import Colog
-  ( HasLog (..),
-    LogAction,
-    Message,
-    Severity (..),
-    WithLog,
-    logInfo,
-  )
+import Colog (HasLog (..), LogAction, Message, WithLog, logInfo)
 import DBus (MemberName)
 import DBus.Client
   ( Client,
@@ -26,16 +22,9 @@ import DBus.Client
     requestName,
   )
 import DBus.Internal.Message (Signal (..))
-import MailNotifier.Utils
-  ( atomicallyTimeoutUntilFail_,
-    busName,
-    interface,
-    mkLogAction,
-    objectPath,
-    withDBus,
-  )
+import MailNotifier.Utils (atomicallyTimeoutUntilFail_, busName, interface, objectPath)
 import Relude
-import UnliftIO (TBQueue, newTBQueue, readTBQueue, throwIO, writeTBQueue)
+import UnliftIO (TBQueue, readTBQueue, throwIO, writeTBQueue)
 
 type Queue = TBQueue ()
 
@@ -118,15 +107,3 @@ instance HasQueue (Env m) where
 
 run :: Env App -> App a -> IO a
 run env application = runReaderT (runApp application) env
-
-main :: IO ()
-main = do
-  hSetBuffering stdout LineBuffering -- print log while running under systemd
-  queue <- atomically $ newTBQueue 10
-  let env :: Env App
-      env =
-        Env
-          { envLogAction = mkLogAction Info,
-            envQueue = queue
-          }
-  fmap absurd $ withDBus $ \client -> run env (app client)
