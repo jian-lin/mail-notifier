@@ -103,8 +103,8 @@ main = do
   let env =
         Env
           { envLogAction = mkLogAction $ logLevel config,
-            envSyncJobQueue = syncJobQueue,
-            envWatchdogState = HM.fromList $ zip (toList $ mailboxes config) vs,
+            envSyncJobQueue = SyncJobQueue syncJobQueue,
+            envWatchdogState = WatchdogState $ HM.fromList $ zip (toList $ mailboxes config) vs,
             envConfig = config
           }
   foldMap absurd <$> run app env

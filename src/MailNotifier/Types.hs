@@ -5,17 +5,23 @@ import Network.HaskellNet.IMAP.Types (MailboxName)
 import Relude
 import UnliftIO (TBQueue)
 
-type SyncJobQueue = TBQueue ()
+newtype SyncJobQueue = SyncJobQueue {unSyncJobQueue :: TBQueue ()}
 
-type WatchdogState = HashMap MailboxName (TMVar ())
+newtype WatchdogState = WatchdogState {unWatchdogState :: HashMap MailboxName (TMVar ())}
 
-type Username = String
+newtype Username = Username {unUsername :: Text}
+  deriving stock (Show)
+  deriving newtype (IsString)
 
-type Password = String
+newtype Password = Password {unPassword :: Text}
 
-type AccountName = String
+newtype AccountName = AccountName {unAccountName :: Text}
+  deriving stock (Show)
+  deriving newtype (IsString)
 
-type Server = String
+newtype Server = Server {unServer :: Text}
+  deriving stock (Show)
+  deriving newtype (IsString)
 
 data Config = Config
   { accountName :: !AccountName,

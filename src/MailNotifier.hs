@@ -79,5 +79,5 @@ app = do
                 sslLogToConsole = False
               }
           watchOneMailbox mailbox =
-            withImap (server config) imapSettings (watch (toString password) mailbox)
+            withImap (server config) imapSettings (watch (Password password) mailbox)
       mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes config)

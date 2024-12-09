@@ -22,7 +22,7 @@ sync ::
 sync client = infinitely $ do
   config <- asks getConfig
   logInfo "wait for sync jobs"
-  syncJobQueue <- asks getSyncJobQueue
+  SyncJobQueue syncJobQueue <- asks getSyncJobQueue
   _ <- atomically $ readTBQueue syncJobQueue
   atomicallyTimeoutUntilFail_ (readSyncJobsTimeout config) $ readTBQueue syncJobQueue
   logInfo "got sync jobs, start to sync"
@@ -31,7 +31,7 @@ sync client = infinitely $ do
       "/run/wrappers/bin/mbsyncSetuid"
       [ "--config",
         mbsyncConfigFile config,
-        accountName config
+        toString . unAccountName $ accountName config
       ]
       ""
   unless (null output)

@@ -13,7 +13,7 @@ watchdog = infinitely $ do
   config <- asks getConfig
   let mailboxNum = length $ mailboxes config
   watchdogState <- asks getWatchdogState
-  atomically $ mapM_ takeTMVar $ HM.elems watchdogState
+  atomically $ mapM_ takeTMVar $ HM.elems (unWatchdogState watchdogState)
   reply <- liftIO notifyWatchdog
   logDebug
     $ "all "

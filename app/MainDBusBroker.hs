@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Colog (Severity (Info))
-import MailNotifier.DBusBroker (Env (..), app, run)
+import MailNotifier.DBusBroker (Env (..), Queue (..), app, run)
 import MailNotifier.Utils (mkLogAction, withDBus)
 import Relude
 import UnliftIO (newTBQueue)
@@ -13,6 +13,6 @@ main = do
   let env =
         Env
           { envLogAction = mkLogAction Info,
-            envQueue = queue
+            envQueue = Queue queue
           }
   fmap absurd $ withDBus $ \client -> run env (app client)

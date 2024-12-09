@@ -3,6 +3,7 @@ module MailNotifier.DBusBroker
     run,
     Env (..),
     App,
+    Queue (..),
   )
 where
 
@@ -25,11 +26,11 @@ import MailNotifier.Utils (atomicallyTimeoutUntilFail_, busName, interface, obje
 import Relude
 import UnliftIO (TBQueue, readTBQueue, throwIO, writeTBQueue)
 
-type Queue = TBQueue ()
+newtype Queue = Queue (TBQueue ())
 
 emitSignal :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
 emitSignal client = infinitely $ do
-  queue <- asks getQueue
+  Queue queue <- asks getQueue
   _ <- atomically $ readTBQueue queue
   atomicallyTimeoutUntilFail_ 1_000_000 $ readTBQueue queue
   let signalName = "Synced"
@@ -47,7 +48,7 @@ emitSignal client = infinitely $ do
 
 -- TODO try to add some log
 getSyncNotification :: Queue -> IO ()
-getSyncNotification queue = atomically $ writeTBQueue queue ()
+getSyncNotification (Queue queue) = atomically $ writeTBQueue queue ()
 
 app :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
 app client = do

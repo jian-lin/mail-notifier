@@ -26,7 +26,7 @@ watch ::
 watch password accountMailbox conn = do
   logInfo $ "watch " <> toText accountMailbox
   config <- asks getConfig
-  liftIO $ login conn (username config) password
+  liftIO $ login conn (toString . unUsername $ username config) (toString . unPassword $ password)
   logDebug "logged in "
   capabilities <- liftIO $ capability conn
   logDebug $ "capabilities: " <> show capabilities
@@ -38,7 +38,7 @@ watch password accountMailbox conn = do
   mailNum <- liftIO getMailNum
   logInfo $ show mailNum <> " mails in " <> toText accountMailbox
   syncJobQueue <- asks getSyncJobQueue
-  atomically $ writeTBQueue syncJobQueue () -- initial sync job
+  atomically $ writeTBQueue (unSyncJobQueue syncJobQueue) () -- initial sync job
   let supportIdle = "IDLE" `elem` (toUpper <<$>> capabilities) -- assume case-insensitive
       watchAwhile =
         if supportIdle
@@ -55,7 +55,7 @@ watchLoop ::
   MailboxName ->
   m Void
 watchLoop mailNum watchAwhile getMailNum accountMailbox = do
-  watchdogState <- asks ((HM.! accountMailbox) . getWatchdogState)
+  watchdogState <- asks $ (HM.! accountMailbox) . unWatchdogState . getWatchdogState
   _ <- atomically $ tryPutTMVar watchdogState ()
   watchAwhile
   newMailNum <- getMailNum
@@ -74,5 +74,5 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
         <> show (newMailNum - mailNum)
         <> " new mail(s), total "
         <> show mailNum
-      atomically $ writeTBQueue syncJobQueue ()
+      atomically $ writeTBQueue (unSyncJobQueue syncJobQueue) ()
       watchLoop newMailNum watchAwhile getMailNum accountMailbox
