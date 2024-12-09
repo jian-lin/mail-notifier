@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
-
 module MailNotifier
   ( main,
   )
@@ -100,7 +98,7 @@ watch ::
 watch password accountMailbox conn = do
   logInfo $ "watch " <> toText accountMailbox
   args <- asks getArgs
-  liftIO $ login conn args.username password
+  liftIO $ login conn (username args) password
   logDebug "logged in "
   capabilities <- liftIO $ capability conn
   logDebug $ "capabilities: " <> show capabilities
@@ -119,8 +117,8 @@ watch password accountMailbox conn = do
       watchAwhile :: IO ()
       watchAwhile =
         if supportIdle
-          then idle conn args.idleTimeout
-          else threadDelay args.pollInterval
+          then idle conn (idleTimeout args)
+          else threadDelay (pollInterval args)
   logInfo $ "enter watchLoop, " <> if supportIdle then "use IDLE" else "fallback to poll"
   watchLoop mailNum (liftIO watchAwhile) (liftIO getMailNum) accountMailbox
 
@@ -163,15 +161,15 @@ sync client = infinitely $ do
   logInfo "wait for sync jobs"
   syncJobQueue <- asks getSyncJobQueue
   _ <- liftIO $ atomically $ readTBQueue syncJobQueue
-  liftIO $ atomicallyTimeoutUntilFail_ args.readSyncJobsTimeout $ readTBQueue syncJobQueue
+  liftIO $ atomicallyTimeoutUntilFail_ (readSyncJobsTimeout args) $ readTBQueue syncJobQueue
   logInfo "got sync jobs, start to sync"
   output <-
     liftIO
       $ readProcess
         "/run/wrappers/bin/mbsyncSetuid"
         [ "--config",
-          args.mbsyncConfigFile,
-          args.accountName
+          mbsyncConfigFile args,
+          accountName args
         ]
         ""
   unless (null output)
@@ -212,7 +210,7 @@ watchdog ::
   m Void
 watchdog = infinitely $ do
   args <- asks getArgs
-  let mailboxNum = length args.mailboxes
+  let mailboxNum = length $ mailboxes args
   watchdogState <- asks getWatchdogState
   liftIO $ atomically $ mapM_ takeTMVar $ HM.elems watchdogState
   reply <- liftIO notifyWatchdog
@@ -233,7 +231,7 @@ warnArgs = do
   --   a server may limit number of connections from a single client
   --   a client may use up its memory (less likely in this case)
   --   a client may increase the overhead of its sheduler
-  let mailboxNum = length args.mailboxes
+  let mailboxNum = length $ mailboxes args
   when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> show mailboxNum
 
   watchdogTimeoutStringMaybe <- liftIO $ lookupEnv "WATCHDOG_USEC"
@@ -241,14 +239,14 @@ warnArgs = do
       watchdogTimeoutIntMaybe = watchdogTimeoutStringMaybe >>= readMaybe
   case watchdogTimeoutIntMaybe of
     Just watchdogTimeout ->
-      when (watchdogTimeout <= args.pollInterval || watchdogTimeout <= (args.idleTimeout * 1_000))
+      when (watchdogTimeout <= pollInterval args || watchdogTimeout <= (idleTimeout args * 1_000))
         $ logWarning
         $ "systemd WatchdogSec ("
         <> show watchdogTimeout
         <> ") is smaller than poll interval ("
-        <> show args.pollInterval
+        <> show (pollInterval args)
         <> ") or idle timeout ("
-        <> show (args.idleTimeout * 1_000)
+        <> show (idleTimeout args * 1_000)
         <> ") (unit: us)"
     Nothing -> pure ()
 
@@ -268,7 +266,7 @@ app = do
   logDebug $ show args
   -- TODO is it better to: bracket openFile hClose $ \h -> ...
   -- what happens if readFile fails in the process of reading an opened file? will file be closed?
-  password <- liftIO $ readFile args.passwordFile
+  password <- liftIO $ readFile $ passwordFile args
   warnArgs
   logInfo
     $ "DBus: "
@@ -284,8 +282,8 @@ app = do
             sslLogToConsole = False
           }
       watchOneMailbox mailbox =
-        withImap args.server imapSettings (watch password mailbox)
-  mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox args.mailboxes
+        withImap (server args) imapSettings (watch password mailbox)
+  mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes args)
 
 data Args = Args
   { accountName :: !AccountName,
@@ -432,16 +430,16 @@ main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   args <- parseArgs
   -- no exception raised from Integer -> Natural since mailboxes is NonEmpty
-  let mailboxNum = length args.mailboxes
+  let mailboxNum = length $ mailboxes args
       queueSize = 3 * fromInteger (toInteger mailboxNum)
   syncJobQueue <- atomically $ newTBQueue queueSize
   vs <- atomically $ replicateM mailboxNum newEmptyTMVar
   let env :: Env App
       env =
         Env
-          { envLogAction = mkLogAction args.logLevel,
+          { envLogAction = mkLogAction $ logLevel args,
             envSyncJobQueue = syncJobQueue,
-            envWatchdogState = HM.fromList $ zip (NL.toList args.mailboxes) vs,
+            envWatchdogState = HM.fromList $ zip (NL.toList $ mailboxes args) vs,
             envArgs = args
           }
   foldMap absurd <$> run env app

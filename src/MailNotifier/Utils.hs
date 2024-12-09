@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module MailNotifier.Utils
@@ -92,11 +91,11 @@ mkLogAction severity =
       fmtRichMessage richMsg =
         let formatRichMessage :: Maybe ThreadId -> Maybe Time -> Message -> Text
             formatRichMessage (maybe "" showThreadId -> thread) (maybe "" showTime -> time) msg =
-              showSeverity msg.msgSeverity
+              showSeverity (msgSeverity msg)
                 <> (if severity <= Debug then time else mempty)
-                <> (if severity <= Debug then showSourceLoc msg.msgStack else mempty)
+                <> (if severity <= Debug then showSourceLoc (msgStack msg) else mempty)
                 <> thread
-                <> msg.msgText
+                <> msgText msg
          in fmtRichMessageCustomDefault richMsg formatRichMessage
       -- modified from richMessageAction
       logAction :: (MonadIO m) => LogAction m Message
