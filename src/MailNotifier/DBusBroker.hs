@@ -31,8 +31,8 @@ type Queue = TBQueue ()
 emitSignal :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
 emitSignal client = infinitely $ do
   queue <- asks getQueue
-  _ <- liftIO $ atomically $ readTBQueue queue
-  liftIO $ atomicallyTimeoutUntilFail_ 1_000_000 $ readTBQueue queue
+  _ <- atomically $ readTBQueue queue
+  atomicallyTimeoutUntilFail_ 1_000_000 $ readTBQueue queue
   let signalName :: MemberName
       signalName = "Synced"
       signal :: Signal

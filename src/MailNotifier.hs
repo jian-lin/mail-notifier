@@ -31,7 +31,7 @@ warnArgs = do
   let mailboxNum = length $ mailboxes args
   when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> show mailboxNum
 
-  watchdogTimeoutStringMaybe <- liftIO $ lookupEnv "WATCHDOG_USEC"
+  watchdogTimeoutStringMaybe <- lookupEnv "WATCHDOG_USEC"
   let watchdogTimeoutIntMaybe :: Maybe Int
       watchdogTimeoutIntMaybe = watchdogTimeoutStringMaybe >>= readMaybe
   case watchdogTimeoutIntMaybe of

@@ -39,7 +39,7 @@ watch password accountMailbox conn = do
   mailNum <- liftIO getMailNum
   logInfo $ show mailNum <> " mails in " <> toText accountMailbox
   syncJobQueue <- asks getSyncJobQueue
-  liftIO $ atomically $ writeTBQueue syncJobQueue () -- initial sync job
+  atomically $ writeTBQueue syncJobQueue () -- initial sync job
   let supportIdle :: Bool
       supportIdle = "IDLE" `elem` (toUpper <<$>> capabilities) -- assume case-insensitive
       watchAwhile :: IO ()
@@ -59,7 +59,7 @@ watchLoop ::
   m Void
 watchLoop mailNum watchAwhile getMailNum accountMailbox = do
   watchdogState <- asks ((HM.! accountMailbox) . getWatchdogState)
-  _ <- liftIO $ atomically $ tryPutTMVar watchdogState ()
+  _ <- atomically $ tryPutTMVar watchdogState ()
   watchAwhile
   newMailNum <- getMailNum
   syncJobQueue <- asks getSyncJobQueue
@@ -77,5 +77,5 @@ watchLoop mailNum watchAwhile getMailNum accountMailbox = do
         <> show (newMailNum - mailNum)
         <> " new mail(s), total "
         <> show mailNum
-      liftIO $ atomically $ writeTBQueue syncJobQueue ()
+      atomically $ writeTBQueue syncJobQueue ()
       watchLoop newMailNum watchAwhile getMailNum accountMailbox

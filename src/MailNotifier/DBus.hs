@@ -23,18 +23,17 @@ sync client = infinitely $ do
   args <- asks getArgs
   logInfo "wait for sync jobs"
   syncJobQueue <- asks getSyncJobQueue
-  _ <- liftIO $ atomically $ readTBQueue syncJobQueue
-  liftIO $ atomicallyTimeoutUntilFail_ (readSyncJobsTimeout args) $ readTBQueue syncJobQueue
+  _ <- atomically $ readTBQueue syncJobQueue
+  atomicallyTimeoutUntilFail_ (readSyncJobsTimeout args) $ readTBQueue syncJobQueue
   logInfo "got sync jobs, start to sync"
   output <-
-    liftIO
-      $ readProcess
-        "/run/wrappers/bin/mbsyncSetuid"
-        [ "--config",
-          mbsyncConfigFile args,
-          accountName args
-        ]
-        ""
+    readProcess
+      "/run/wrappers/bin/mbsyncSetuid"
+      [ "--config",
+        mbsyncConfigFile args,
+        accountName args
+      ]
+      ""
   unless (null output)
     $ logWarning ("sync output: " <> toText output) -- has warnings
   notify client

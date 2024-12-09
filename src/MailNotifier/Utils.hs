@@ -42,12 +42,12 @@ import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
 import UnliftIO.Concurrent (ThreadId)
 
-atomicallyTimeout :: Int -> STM a -> IO (Maybe a)
+atomicallyTimeout :: (MonadIO m) => Int -> STM a -> m (Maybe a)
 atomicallyTimeout microsecond action = do
   timer <- registerDelay microsecond
   atomically $ (Just <$> action) `orElse` (Nothing <$ (checkSTM <=< readTVar) timer)
 
-atomicallyTimeoutUntilFail_ :: Int -> STM a -> IO ()
+atomicallyTimeoutUntilFail_ :: (MonadIO m) => Int -> STM a -> m ()
 atomicallyTimeoutUntilFail_ microsecond action = do
   result <- atomicallyTimeout microsecond action
   case result of
