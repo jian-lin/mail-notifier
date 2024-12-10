@@ -3,7 +3,7 @@ module MailNotifier.App where
 import DBus (methodCall, methodCallDestination)
 import DBus.Client (call_)
 import Data.HashMap.Strict (elems, lookup)
-import MailNotifier.Exception (WatchdogMailboxError (..))
+import MailNotifier.Exception (PasswordDecodeException (..), WatchdogMailboxError (..))
 import MailNotifier.Types
 import MailNotifier.Utils
   ( atomicallyTimeoutUntilFail_,
@@ -16,7 +16,7 @@ import Network.HaskellNet.IMAP.Connection (exists)
 import Network.HaskellNet.IMAP.SSL (capability, idle, list, login, select)
 import Relude
 import System.Systemd.Daemon (notifyWatchdog)
-import UnliftIO (MonadUnliftIO, throwIO)
+import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcess)
 import UnliftIO.STM (readTBQueue, writeTBQueue)
@@ -69,3 +69,14 @@ instance MonadWatchdog App where
   notiftyWatchdogWhenAllMailboxesAreCheckedM (WatchdogState watchdogState) = do
     atomically $ mapM_ takeTMVar $ elems watchdogState
     liftIO notifyWatchdog
+
+instance MonadIORead App where
+  readFileM filePath = do
+    eContent <- decodeUtf8' <$> readFileBS filePath
+    case eContent of
+      Left err -> throwIO $ PasswordDecodeException err
+      Right content -> pure content
+  lookupEnvM = (fmap . fmap) toText . lookupEnv . toString
+
+instance MonadAsync App where
+  concurrentlyManyM = mapConcurrently id

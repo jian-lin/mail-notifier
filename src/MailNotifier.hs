@@ -3,14 +3,12 @@ module MailNotifier (app) where
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
 import Data.List.NonEmpty ((<|))
 import MailNotifier.DBus (sync)
-import MailNotifier.Exception
 import MailNotifier.Mail (watch)
 import MailNotifier.Types
 import MailNotifier.Utils (busName, interface, objectPath, withDBus, withImap)
 import MailNotifier.Watchdog (watchdog)
 import Network.HaskellNet.IMAP.SSL (Settings (..), defaultSettingsIMAPSSL)
 import Relude
-import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
 
 -- TODO patch HaskellNetSSL to replace connection with crypton-connection
 -- https://github.com/dpwright/HaskellNet-SSL/pull/34/files
@@ -19,8 +17,8 @@ import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
 -- TODO handle exceptions (or not? do they worth being handling?)
 -- TODO add some doc string
 
-warnConfig :: (WithLog env Message m, MonadIO m, HasConfig env) => m ()
-warnConfig = do
+warnConfig :: (WithLog env Message m, HasConfig env) => Maybe Text -> m ()
+warnConfig mWatchdogTimeoutString = do
   config <- asks getConfig
 
   -- running an unbounded numbder of threads concurrently is a bad pattern
@@ -31,8 +29,7 @@ warnConfig = do
   let mailboxNum = length $ mailboxes config
   when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> show mailboxNum
 
-  mWatchdogTimeoutString <- lookupEnv "WATCHDOG_USEC"
-  case mWatchdogTimeoutString >>= readMaybe of
+  case mWatchdogTimeoutString >>= (readMaybe . toString) of
     Just watchdogTimeout ->
       when
         (watchdogTimeout <= pollInterval config || watchdogTimeout <= (idleTimeout config * 1_000))
@@ -55,31 +52,23 @@ app ::
     MonadSync m,
     WithLog env Message m,
     MonadReader env m,
-    MonadUnliftIO m,
+    MonadAsync m,
+    MonadIORead m,
     MonadMailRead m
   ) =>
   m (NonEmpty Void)
 app = do
   config <- asks getConfig
   logDebug $ show config
-  ePassword <- decodeUtf8' <$> readFileBS (passwordFile config)
-  case ePassword of
-    Left err -> throwIO $ PasswordDecodeException err
-    Right password -> do
-      warnConfig
-      logInfo
-        $ "DBus: "
-        <> show busName
-        <> " "
-        <> show objectPath
-        <> " "
-        <> show interface
-      let imapSettings =
-            defaultSettingsIMAPSSL
-              { sslMaxLineLength = 100_000,
-                -- NOTE setting sslLogToConsole to True will print your password in clear text!
-                sslLogToConsole = False
-              }
-          watchOneMailbox mailbox =
-            withImap (server config) imapSettings (watch (Password password) mailbox)
-      mapConcurrently id $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes config)
+  password <- readFileM (passwordFile config)
+  warnConfig =<< lookupEnvM "WATCHDOG_USEC"
+  logInfo $ "DBus: " <> show busName <> " " <> show objectPath <> " " <> show interface
+  let imapSettings =
+        defaultSettingsIMAPSSL
+          { sslMaxLineLength = 100_000,
+            -- NOTE setting sslLogToConsole to True will print your password in clear text!
+            sslLogToConsole = False
+          }
+      watchOneMailbox mailbox =
+        withImap (server config) imapSettings (watch (Password password) mailbox)
+  concurrentlyManyM $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes config)

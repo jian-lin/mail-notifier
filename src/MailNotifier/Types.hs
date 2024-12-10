@@ -5,7 +5,7 @@ import DBus.Client (Client)
 import Data.Text (toLower)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Relude
-import UnliftIO (TBQueue)
+import UnliftIO (MonadUnliftIO, TBQueue)
 
 newtype SyncJobQueue = SyncJobQueue (TBQueue ())
 
@@ -121,3 +121,10 @@ class (Monad m) => MonadSync m where
 class (Monad m) => MonadWatchdog m where
   signalCheckedMailboxM :: Mailbox -> WatchdogState -> m ()
   notiftyWatchdogWhenAllMailboxesAreCheckedM :: WatchdogState -> m (Maybe ())
+
+class (Monad m) => MonadIORead m where
+  readFileM :: FilePath -> m Text
+  lookupEnvM :: Text -> m (Maybe Text)
+
+class (Monad m, MonadUnliftIO m) => MonadAsync m where
+  concurrentlyManyM :: (Traversable t) => t (m a) -> m (t a)
