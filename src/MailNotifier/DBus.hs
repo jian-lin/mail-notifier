@@ -14,7 +14,7 @@ sync client = infinitely $ do
   config <- asks getConfig
   logInfo "wait for sync jobs"
   syncJobQueue <- asks getSyncJobQueue
-  waitForSyncJobsM syncJobQueue (Timeout $ readSyncJobsTimeout config)
+  waitForSyncJobsM syncJobQueue (readSyncJobsTimeout config)
   logInfo "got sync jobs, start to sync"
   output <-
     syncM

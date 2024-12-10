@@ -32,9 +32,9 @@ data Config = Config
     passwordFile :: !FilePath,
     mbsyncConfigFile :: !FilePath,
     mailboxes :: !(NonEmpty Mailbox),
-    idleTimeout :: !Integer,
-    readSyncJobsTimeout :: !Integer,
-    pollInterval :: !Integer,
+    idleTimeout :: !Timeout,
+    readSyncJobsTimeout :: !Timeout,
+    pollInterval :: !Timeout,
     logLevel :: !Severity
   }
   deriving stock (Show)
@@ -95,6 +95,8 @@ newtype Mailbox = Mailbox Text
   deriving newtype (Hashable, IsString)
 
 newtype Timeout = Timeout Integer -- TODO make sure it is positive
+  deriving stock (Show, Read, Ord, Eq)
+  deriving newtype (Num, Real, Enum, Integral)
 
 data IdleMode = Idle | Sleep deriving stock (Eq)
 

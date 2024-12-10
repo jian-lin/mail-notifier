@@ -37,12 +37,12 @@ import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout
 import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
 
-atomicallyTimeout :: (MonadIO m) => Integer -> STM a -> m (Maybe a)
+atomicallyTimeout :: (MonadIO m) => Timeout -> STM a -> m (Maybe a)
 atomicallyTimeout microsecond action = do
-  timer <- registerDelay $ fromInteger microsecond
+  timer <- registerDelay $ fromIntegral microsecond
   atomically $ (Just <$> action) `orElse` (Nothing <$ (checkSTM <=< readTVar) timer)
 
-atomicallyTimeoutUntilFail_ :: (MonadIO m) => Integer -> STM a -> m ()
+atomicallyTimeoutUntilFail_ :: (MonadIO m) => Timeout -> STM a -> m ()
 atomicallyTimeoutUntilFail_ microsecond action = do
   result <- atomicallyTimeout microsecond action
   case result of

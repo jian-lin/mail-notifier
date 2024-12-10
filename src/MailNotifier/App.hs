@@ -42,7 +42,7 @@ instance MonadMailRead App where
 
 instance MonadSync App where
   addSyncJobM (SyncJobQueue queue) = atomically $ writeTBQueue queue ()
-  waitForSyncJobsM (SyncJobQueue queue) (Timeout timeout) = do
+  waitForSyncJobsM (SyncJobQueue queue) timeout = do
     _ <- atomically $ readTBQueue queue
     atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue
   syncM program args = toText <$> readProcess program (toString <$> args) ""

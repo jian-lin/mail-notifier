@@ -41,8 +41,8 @@ watch password mailbox conn = do
   let supportIdle = "IDLE" `elem` capabilities
       watchAwhile =
         if supportIdle
-          then idleOrSleepM conn (Timeout $ idleTimeout config) Idle
-          else idleOrSleepM conn (Timeout $ pollInterval config) Sleep
+          then idleOrSleepM conn (idleTimeout config) Idle
+          else idleOrSleepM conn (pollInterval config) Sleep
   logInfo $ "enter watchLoop, " <> if supportIdle then "use IDLE" else "fallback to poll"
   watchLoop mailNum watchAwhile (getMailNumM conn) mailbox
 
