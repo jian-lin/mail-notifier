@@ -58,8 +58,6 @@ app ::
 app = do
   config <- asks getConfig
   logDebug $ show config
-  -- TODO is it better to: bracket openFile hClose $ \h -> ...
-  -- what happens if readFile fails in the process of reading an opened file? will file be closed?
   ePassword <- decodeUtf8' <$> readFileBS (passwordFile config)
   case ePassword of
     Left err -> throwIO $ PasswordDecodeException err
