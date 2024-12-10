@@ -109,7 +109,7 @@ class (Monad m) => MonadMailRead m where
   getMailNumM :: ImapConnection -> m Integer
   idleOrSleepM :: ImapConnection -> Timeout -> IdleMode -> m ()
 
-newtype DBusClient = DBusClient Client
+newtype DBusClient = DBusClient {unDBusClient :: Client}
 
 class (Monad m) => MonadSync m where
   addSyncJobM :: SyncJobQueue -> m ()

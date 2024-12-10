@@ -9,8 +9,7 @@ where
 
 import Colog (HasLog (..), LogAction, Message, WithLog, logInfo)
 import DBus.Client
-  ( Client,
-    RequestNameReply (NamePrimaryOwner),
+  ( RequestNameReply (NamePrimaryOwner),
     autoMethod,
     clientError,
     defaultInterface,
@@ -29,8 +28,8 @@ import UnliftIO (TBQueue, readTBQueue, throwIO, writeTBQueue)
 
 newtype Queue = Queue (TBQueue ())
 
-emitSignal :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
-emitSignal client = infinitely $ do
+emitSignal :: (WithLog env Message m, MonadIO m, HasQueue env) => DBusClient -> m Void
+emitSignal (DBusClient client) = infinitely $ do
   Queue queue <- asks getQueue
   _ <- atomically $ readTBQueue queue
   atomicallyTimeoutUntilFail_ 1_000_000 $ readTBQueue queue
@@ -52,9 +51,9 @@ getSyncNotification :: Queue -> IO ()
 getSyncNotification (Queue queue) = atomically $ writeTBQueue queue ()
 
 app :: (WithLog env Message m, MonadIO m, HasQueue env) => DBusClient -> m Void
-app (DBusClient client) = do
+app client = do
   logInfo $ "try to request " <> show busName
-  reply <- liftIO $ requestName client (unDBusBusName busName) [nameDoNotQueue]
+  reply <- liftIO $ requestName (unDBusClient client) (unDBusBusName busName) [nameDoNotQueue]
   when (reply /= NamePrimaryOwner) $ do
     throwIO $ clientError $ "failed to request " <> show busName <> ": " <> show reply
   logInfo $ "requested " <> show busName
@@ -62,7 +61,7 @@ app (DBusClient client) = do
   let methodName = "Notify"
   liftIO
     $ export
-      client
+      (unDBusClient client)
       (unDBusObjectPath objectPath)
       defaultInterface
         { interfaceName = unDBusInterfaceName interface,
