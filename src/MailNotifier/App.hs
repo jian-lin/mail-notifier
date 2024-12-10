@@ -54,11 +54,11 @@ instance MonadSync App where
       $ call_
         client
         ( methodCall
-            objectPath
-            interface
-            syncNotificationMethodName
+            (unDBusObjectPath objectPath)
+            (unDBusInterfaceName interface)
+            (unDBusMemberName syncNotificationMethodName)
         )
-          { methodCallDestination = Just busName
+          { methodCallDestination = Just (unDBusBusName busName)
           }
 
 instance MonadWatchdog App where

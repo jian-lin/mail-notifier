@@ -29,9 +29,7 @@ import Colog
     showTime,
     upgradeMessageAction,
   )
-import DBus (BusName, MemberName, ObjectPath)
 import DBus.Client (connectSystem, disconnect)
-import DBus.Internal.Types (InterfaceName)
 import MailNotifier.Types
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
@@ -60,14 +58,14 @@ withDBus :: (MonadUnliftIO m) => (DBusClient -> m a) -> m a
 withDBus action = withRunInIO $ \runInIO ->
   bracket connectSystem disconnect (runInIO . action . DBusClient)
 
-busName :: BusName
-busName = "tech.linj.MailNotifier"
+busName :: DBusBusName
+busName = DBusBusName "tech.linj.MailNotifier"
 
-objectPath :: ObjectPath
-objectPath = "/tech/linj/MailNotifier"
+objectPath :: DBusObjectPath
+objectPath = DBusObjectPath "/tech/linj/MailNotifier"
 
-interface :: InterfaceName
-interface = "tech.linj.MailNotifier"
+interface :: DBusInterfaceName
+interface = DBusInterfaceName "tech.linj.MailNotifier"
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message
 mkLogAction severity =
@@ -88,5 +86,5 @@ mkLogAction severity =
           $ cmapM (fmap encodeUtf8 . fmtRichMessage) logByteStringStdout
    in filterBySeverity severity msgSeverity logAction
 
-syncNotificationMethodName :: MemberName
-syncNotificationMethodName = "Notify"
+syncNotificationMethodName :: DBusMemberName
+syncNotificationMethodName = DBusMemberName "Notify"

@@ -1,6 +1,7 @@
 module MailNotifier.Types where
 
 import Colog (HasLog (..), LogAction, Message, Severity)
+import DBus (BusName, InterfaceName, MemberName, ObjectPath)
 import DBus.Client (Client)
 import Data.Text (toLower)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
@@ -130,3 +131,15 @@ class (Monad m) => MonadIORead m where
 
 class (Monad m, MonadUnliftIO m) => MonadAsync m where
   concurrentlyManyM :: (Traversable t) => t (m a) -> m (t a)
+
+newtype DBusBusName = DBusBusName {unDBusBusName :: BusName}
+  deriving stock (Show)
+
+newtype DBusObjectPath = DBusObjectPath {unDBusObjectPath :: ObjectPath}
+  deriving stock (Show)
+
+newtype DBusInterfaceName = DBusInterfaceName {unDBusInterfaceName :: InterfaceName}
+  deriving stock (Show)
+
+newtype DBusMemberName = DBusMemberName {unDBusMemberName :: MemberName}
+  deriving stock (Show)

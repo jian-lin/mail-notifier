@@ -22,7 +22,7 @@ import DBus.Client
     requestName,
   )
 import DBus.Internal.Message (Signal (..))
-import MailNotifier.Types (DBusClient (..))
+import MailNotifier.Types (DBusClient (..), unDBusBusName, unDBusInterfaceName, unDBusObjectPath)
 import MailNotifier.Utils (atomicallyTimeoutUntilFail_, busName, interface, objectPath)
 import Relude
 import UnliftIO (TBQueue, readTBQueue, throwIO, writeTBQueue)
@@ -37,8 +37,8 @@ emitSignal client = infinitely $ do
   let signalName = "Synced"
       signal =
         Signal
-          { signalPath = objectPath,
-            signalInterface = interface,
+          { signalPath = unDBusObjectPath objectPath,
+            signalInterface = unDBusInterfaceName interface,
             signalMember = signalName,
             signalSender = Nothing,
             signalDestination = Nothing,
@@ -54,7 +54,7 @@ getSyncNotification (Queue queue) = atomically $ writeTBQueue queue ()
 app :: (WithLog env Message m, MonadIO m, HasQueue env) => DBusClient -> m Void
 app (DBusClient client) = do
   logInfo $ "try to request " <> show busName
-  reply <- liftIO $ requestName client busName [nameDoNotQueue]
+  reply <- liftIO $ requestName client (unDBusBusName busName) [nameDoNotQueue]
   when (reply /= NamePrimaryOwner) $ do
     throwIO $ clientError $ "failed to request " <> show busName <> ": " <> show reply
   logInfo $ "requested " <> show busName
@@ -63,9 +63,9 @@ app (DBusClient client) = do
   liftIO
     $ export
       client
-      objectPath
+      (unDBusObjectPath objectPath)
       defaultInterface
-        { interfaceName = interface,
+        { interfaceName = unDBusInterfaceName interface,
           interfaceMethods = [autoMethod methodName (getSyncNotification queue)]
         }
   logInfo
