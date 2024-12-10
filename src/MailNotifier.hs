@@ -34,7 +34,8 @@ warnConfig = do
   mWatchdogTimeoutString <- lookupEnv "WATCHDOG_USEC"
   case mWatchdogTimeoutString >>= readMaybe of
     Just watchdogTimeout ->
-      when (watchdogTimeout <= pollInterval config || watchdogTimeout <= (idleTimeout config * 1_000))
+      when
+        (watchdogTimeout <= pollInterval config || watchdogTimeout <= (idleTimeout config * 1_000))
         $ logWarning
         $ "systemd WatchdogSec ("
         <> show watchdogTimeout
@@ -49,10 +50,13 @@ warnConfig = do
 app ::
   ( HasConfig env,
     HasWatchdogState env,
+    MonadWatchdog m,
     HasSyncJobQueue env,
+    MonadSync m,
     WithLog env Message m,
     MonadReader env m,
-    MonadUnliftIO m
+    MonadUnliftIO m,
+    MonadMailRead m
   ) =>
   m (NonEmpty Void)
 app = do

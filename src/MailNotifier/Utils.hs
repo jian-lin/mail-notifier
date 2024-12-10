@@ -30,36 +30,35 @@ import Colog
     upgradeMessageAction,
   )
 import DBus (BusName, MemberName, ObjectPath)
-import DBus.Client (Client, connectSystem, disconnect)
+import DBus.Client (connectSystem, disconnect)
 import DBus.Internal.Types (InterfaceName)
 import MailNotifier.Types
-import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
 import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
 
-atomicallyTimeout :: (MonadIO m) => Int -> STM a -> m (Maybe a)
+atomicallyTimeout :: (MonadIO m) => Integer -> STM a -> m (Maybe a)
 atomicallyTimeout microsecond action = do
-  timer <- registerDelay microsecond
+  timer <- registerDelay $ fromInteger microsecond
   atomically $ (Just <$> action) `orElse` (Nothing <$ (checkSTM <=< readTVar) timer)
 
-atomicallyTimeoutUntilFail_ :: (MonadIO m) => Int -> STM a -> m ()
+atomicallyTimeoutUntilFail_ :: (MonadIO m) => Integer -> STM a -> m ()
 atomicallyTimeoutUntilFail_ microsecond action = do
   result <- atomicallyTimeout microsecond action
   case result of
     Just _ -> atomicallyTimeoutUntilFail_ microsecond action
     Nothing -> pure ()
 
-withImap :: (MonadUnliftIO m) => Server -> Settings -> (IMAPConnection -> m a) -> m a
+withImap :: (MonadUnliftIO m) => Server -> Settings -> (ImapConnection -> m a) -> m a
 withImap server settings action = withRunInIO $ \runInIO ->
   bracket
-    (connectIMAPSSLWithSettings (toString . unServer $ server) settings)
+    (connectIMAPSSLWithSettings (toString server) settings)
     logout
-    (runInIO . action)
+    (runInIO . action . ImapConnection)
 
-withDBus :: (MonadUnliftIO m) => (Client -> m a) -> m a
+withDBus :: (MonadUnliftIO m) => (DBusClient -> m a) -> m a
 withDBus action = withRunInIO $ \runInIO ->
-  bracket connectSystem disconnect (runInIO . action)
+  bracket connectSystem disconnect (runInIO . action . DBusClient)
 
 busName :: BusName
 busName = "tech.linj.MailNotifier"

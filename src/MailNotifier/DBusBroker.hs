@@ -22,6 +22,7 @@ import DBus.Client
     requestName,
   )
 import DBus.Internal.Message (Signal (..))
+import MailNotifier.Types (DBusClient (..))
 import MailNotifier.Utils (atomicallyTimeoutUntilFail_, busName, interface, objectPath)
 import Relude
 import UnliftIO (TBQueue, readTBQueue, throwIO, writeTBQueue)
@@ -50,8 +51,8 @@ emitSignal client = infinitely $ do
 getSyncNotification :: Queue -> IO ()
 getSyncNotification (Queue queue) = atomically $ writeTBQueue queue ()
 
-app :: (WithLog env Message m, MonadIO m, HasQueue env) => Client -> m Void
-app client = do
+app :: (WithLog env Message m, MonadIO m, HasQueue env) => DBusClient -> m Void
+app (DBusClient client) = do
   logInfo $ "try to request " <> show busName
   reply <- liftIO $ requestName client busName [nameDoNotQueue]
   when (reply /= NamePrimaryOwner) $ do
