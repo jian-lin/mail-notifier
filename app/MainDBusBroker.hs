@@ -15,4 +15,4 @@ main = do
           { envLogAction = mkLogAction Info,
             envQueue = Queue queue
           }
-  fmap absurd $ withDBus $ \client -> run env (app client)
+  fmap absurd $ withDBus $ \client -> run (app client) env

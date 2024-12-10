@@ -103,5 +103,5 @@ instance HasQueue (Env m) where
   getQueue = envQueue
   {-# INLINE getQueue #-}
 
-run :: Env App -> App a -> IO a
-run env application = runReaderT (runApp application) env
+run :: App a -> Env App -> IO a
+run application = runReaderT (runApp application)
