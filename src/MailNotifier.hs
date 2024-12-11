@@ -52,7 +52,6 @@ warnConfig mWatchdogTimeoutString = do
         <> ") (unit: us)"
     Nothing -> pure ()
 
--- TODO split env in ReaderT of sync and watch according to the "Next Level MTL" video
 app ::
   ( HasConfig env,
     HasWatchdogState env,

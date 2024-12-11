@@ -13,7 +13,6 @@ import UnliftIO (newTBQueue)
 
 -- TODO split this big parser into smaller ones and then compose those small ones
 -- TODO parse this more strict: positive integer within maxBound :: Int
--- TODO maybe parse name more strict: non-empty
 configParser :: Parser Config
 configParser =
   Config
@@ -73,7 +72,7 @@ configParser =
           <> O.value (2 * 60 * 1_000_000)
           <> O.help "Interval for polling new mails (fallback if IDLE is not supported)"
       )
-    <*> O.option -- TODO find a way to show valid values
+    <*> O.option
       O.auto
       ( O.long "log-level"
           <> O.metavar "LOG-LEVEL"
