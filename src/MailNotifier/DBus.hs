@@ -1,10 +1,10 @@
 module MailNotifier.DBus (sync) where
 
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
-import Data.Text (null)
+import Data.Text qualified as T
 import MailNotifier.Types
 import MailNotifier.Utils (busName, interface, objectPath, syncNotificationMethodName)
-import Relude hiding (null)
+import Relude
 
 sync ::
   (WithLog env Message m, HasConfig env, HasSyncJobQueue env, MonadSync m) =>
@@ -23,7 +23,7 @@ sync client = infinitely $ do
         toText $ mbsyncConfigFile config,
         unAccountName $ accountName config
       ]
-  unless (null output) $ logWarning ("sync output: " <> output) -- has warnings
+  unless (T.null output) $ logWarning ("sync output: " <> output) -- has warnings
   signalSyncDoneM client
   logDebug
     $ "DBus: called method "
