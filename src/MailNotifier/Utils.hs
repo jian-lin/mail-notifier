@@ -32,7 +32,12 @@ import Colog
   )
 import DBus.Client (connectSystem, disconnect)
 import MailNotifier.Types
-import Network.HaskellNet.IMAP.SSL (Settings, connectIMAPSSLWithSettings, logout)
+import Network.HaskellNet.IMAP.SSL
+  ( Settings (..),
+    connectIMAPSSLWithSettings,
+    defaultSettingsIMAPSSL,
+    logout,
+  )
 import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
 
@@ -48,10 +53,10 @@ atomicallyTimeoutUntilFail_ microsecond action = do
     Just _ -> atomicallyTimeoutUntilFail_ microsecond action
     Nothing -> pure ()
 
-withImap :: (MonadUnliftIO m) => Server -> Settings -> (ImapConnection -> m a) -> m a
-withImap server settings action = withRunInIO $ \runInIO ->
+withImap :: (MonadUnliftIO m) => Server -> ImapConfig -> (ImapConnection -> m a) -> m a
+withImap server config action = withRunInIO $ \runInIO ->
   bracket
-    (connectIMAPSSLWithSettings (toString server) settings)
+    (connectIMAPSSLWithSettings (toString server) (fromImapConfig config))
     logout
     (runInIO . action . ImapConnection)
 
@@ -92,3 +97,10 @@ syncNotificationMethodName = DBusMemberName "Notify"
 
 muaSyncSignalName :: DBusMemberName
 muaSyncSignalName = DBusMemberName "Synced"
+
+fromImapConfig :: ImapConfig -> Settings
+fromImapConfig config =
+  defaultSettingsIMAPSSL
+    { sslMaxLineLength = fromMaybe 10_000 $ toIntegralSized $ sslMaxLineLength' config,
+      sslLogToConsole = sslLogToConsole' config
+    }

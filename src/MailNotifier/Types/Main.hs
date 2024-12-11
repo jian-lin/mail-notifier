@@ -61,6 +61,12 @@ instance Eq Capability where
 
 newtype ImapConnection = ImapConnection IMAPConnection
 
+data ImapConfig = ImapConfig
+  { sslMaxLineLength' :: Word16,
+    -- | Setting this to True may /print your password in clear text/.
+    sslLogToConsole' :: Bool
+  }
+
 newtype Mailbox = Mailbox Text
   deriving stock (Show, Eq)
   deriving newtype (Hashable, IsString)

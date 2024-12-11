@@ -15,7 +15,6 @@ import MailNotifier.Utils
     withImap,
   )
 import MailNotifier.Watchdog (watchdog)
-import Network.HaskellNet.IMAP.SSL (Settings (..), defaultSettingsIMAPSSL)
 import Relude
 import UnliftIO (writeTBQueue)
 
@@ -73,14 +72,13 @@ app = do
   password <- readFileM (passwordFile config)
   warnConfig =<< lookupEnvM "WATCHDOG_USEC"
   logInfo $ "DBus: " <> show busName <> " " <> show objectPath <> " " <> show interfaceName
-  let imapSettings =
-        defaultSettingsIMAPSSL
-          { sslMaxLineLength = 100_000,
-            -- NOTE setting sslLogToConsole to True will print your password in clear text!
-            sslLogToConsole = False
+  let imapConfig =
+        ImapConfig
+          { sslMaxLineLength' = 60_000,
+            sslLogToConsole' = False
           }
       watchOneMailbox mailbox =
-        withImap (server config) imapSettings (watch (Password password) mailbox)
+        withImap (server config) imapConfig (watch (Password password) mailbox)
   concurrentlyManyM $ withDBus sync <| watchdog <| fmap watchOneMailbox (mailboxes config)
 
 emitSignal :: (WithLog env Message m, HasSyncJobQueue env, MonadDBus m) => DBusClient -> m Void
