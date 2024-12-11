@@ -122,9 +122,9 @@ main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   config <- parseConfig
-  -- no exception raised from Integer -> Natural since mailboxes is NonEmpty
+  -- Since mailboxNum >= 0, it can be safely converted to Natural.
   let mailboxNum = length $ mailboxes config
-      queueSize = 3 * fromInteger (toInteger mailboxNum)
+      queueSize = 3 * fromIntegral mailboxNum
   syncJobQueue <- atomically $ newTBQueue queueSize
   vs <- atomically $ replicateM mailboxNum newEmptyTMVar
   let env =
