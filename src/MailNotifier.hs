@@ -42,7 +42,7 @@ warnConfig mWatchdogTimeoutString = do
     Just watchdogTimeout ->
       when
         ( (watchdogTimeout <= unTimeout (pollInterval config))
-            || (watchdogTimeout <= unTimeout (idleTimeout config * 1_000))
+            || (watchdogTimeout <= unTimeout (idleTimeout config) * 1_000)
         )
         $ logWarning
         $ "systemd WatchdogSec ("
@@ -50,7 +50,7 @@ warnConfig mWatchdogTimeoutString = do
         <> ") is smaller than poll interval ("
         <> show (pollInterval config)
         <> ") or idle timeout ("
-        <> show (idleTimeout config * 1_000)
+        <> show (unTimeout (idleTimeout config) * 1_000)
         <> ") (unit: us)"
     Nothing -> pure ()
 
@@ -86,7 +86,7 @@ app = do
 emitSignal :: (WithLog env Message m, HasSyncJobQueue env, MonadDBus m) => DBusClient -> m Void
 emitSignal client = infinitely $ do
   queue <- asks getSyncJobQueue
-  waitSyncJobsM queue 1_000_000
+  waitSyncJobsM queue (unsafeMkTimeout 1_000_000)
   emitM client objectPath interfaceName muaSyncSignalName
   logInfo $ "emitted signal: " <> show muaSyncSignalName
 

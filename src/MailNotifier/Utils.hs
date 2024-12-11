@@ -38,7 +38,7 @@ import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRu
 
 atomicallyTimeout :: (MonadIO m) => Timeout -> STM a -> m (Maybe a)
 atomicallyTimeout microsecond action = do
-  timer <- registerDelay $ fromIntegral microsecond
+  timer <- registerDelay $ fromInteger $ unTimeout microsecond
   atomically $ (Just <$> action) `orElse` (Nothing <$ (checkSTM <=< readTVar) timer)
 
 atomicallyTimeoutUntilFail_ :: (MonadIO m) => Timeout -> STM a -> m ()

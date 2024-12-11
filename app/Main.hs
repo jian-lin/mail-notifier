@@ -57,7 +57,7 @@ configParser =
       ( O.long "idle-timeout"
           <> O.metavar "MILLISECOND"
           <> O.showDefault
-          <> O.value (2 * 60 * 1_000)
+          <> O.value (unsafeMkTimeout $ 2 * 60 * 1_000)
           <> O.help "Timeout for IMAP IDLE command"
       )
     <*> O.option
@@ -65,7 +65,7 @@ configParser =
       ( O.long "read-sync-jobs-timeout"
           <> O.metavar "MICROSECOND"
           <> O.showDefault
-          <> O.value 5_000_000
+          <> O.value (unsafeMkTimeout 5_000_000)
           <> O.help "Timeout for reading following sync jobs before performing one sync"
       )
     <*> O.option
@@ -73,7 +73,7 @@ configParser =
       ( O.long "poll-interval"
           <> O.metavar "MICROSECOND"
           <> O.showDefault
-          <> O.value (2 * 60 * 1_000_000)
+          <> O.value (unsafeMkTimeout $ 2 * 60 * 1_000_000)
           <> O.help "Interval for polling new mails (fallback if IDLE is not supported)"
       )
     <*> O.option

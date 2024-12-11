@@ -2,6 +2,7 @@ module MailNotifier.Types.Timeout
   ( Timeout,
     mkTimeout,
     unTimeout,
+    unsafeMkTimeout,
   )
 where
 
@@ -11,8 +12,7 @@ data TimeoutError = NonPositiveTimeout | TooLargeTimeout
   deriving stock (Show)
 
 newtype Timeout = Timeout Integer
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (Num, Real, Enum, Integral)
+  deriving stock (Show)
 
 mkTimeout :: Integer -> Either TimeoutError Timeout
 mkTimeout timeout
@@ -22,3 +22,7 @@ mkTimeout timeout
 
 unTimeout :: Timeout -> Integer
 unTimeout (Timeout timeout) = timeout
+
+-- TODO find a way to remove this
+unsafeMkTimeout :: Integer -> Timeout
+unsafeMkTimeout timeout = either (error . show) id (mkTimeout timeout)
