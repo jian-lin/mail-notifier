@@ -26,7 +26,7 @@ import UnliftIO (writeTBQueue)
 -- TODO handle exceptions (or not? do they worth being handling?)
 -- TODO add some doc string
 
-warnConfig :: (WithLog env Message m, HasConfig env) => Maybe Text -> m ()
+warnConfig :: (WithLog env Message m, HasConfig env) => Maybe EnvVar -> m ()
 warnConfig mWatchdogTimeoutString = do
   config <- asks getConfig
 

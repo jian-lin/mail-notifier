@@ -52,7 +52,7 @@ instance MonadMailRead (App env) where
   getCapabilitiesM (ImapConnection conn) = liftIO $ (Capability . toText) <<$>> capability conn
   listMailboxesM (ImapConnection conn) = liftIO $ (Mailbox . toText . snd) <<$>> list conn
   selectMailboxM (ImapConnection conn) (Mailbox mailbox) = liftIO $ select conn (toString mailbox)
-  getMailNumM (ImapConnection conn) = liftIO $ exists conn
+  getMailNumM (ImapConnection conn) = liftIO $ MailNumber <$> exists conn
   idleOrSleepM (ImapConnection conn) timeout mode =
     liftIO
       $ if mode == Idle
@@ -95,7 +95,7 @@ instance MonadIORead (App env) where
     case eContent of
       Left err -> throwIO $ PasswordDecodeException err
       Right content -> pure content
-  lookupEnvM = (fmap . fmap) toText . lookupEnv . toString
+  lookupEnvM = (fmap . fmap) (EnvVar . toText) . lookupEnv . toString
 
 instance MonadAsync (App env) where
   concurrentlyManyM = mapConcurrently id

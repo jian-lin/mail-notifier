@@ -53,9 +53,9 @@ watchLoop ::
     HasWatchdogState env,
     MonadWatchdog m
   ) =>
-  Integer ->
+  MailNumber ->
   m () ->
-  m Integer ->
+  m MailNumber ->
   Mailbox ->
   m Void
 watchLoop mailNum watchAwhile getMailNum mailbox = do

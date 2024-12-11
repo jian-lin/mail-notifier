@@ -67,12 +67,16 @@ newtype Mailbox = Mailbox Text
 
 data IdleMode = Idle | Sleep deriving stock (Eq)
 
+newtype MailNumber = MailNumber Integer
+  deriving stock (Show, Eq)
+  deriving newtype (Num)
+
 class (Monad m) => MonadMailRead m where
   loginM :: ImapConnection -> Username -> Password -> m ()
   getCapabilitiesM :: ImapConnection -> m [Capability]
   listMailboxesM :: ImapConnection -> m [Mailbox]
   selectMailboxM :: ImapConnection -> Mailbox -> m ()
-  getMailNumM :: ImapConnection -> m Integer
+  getMailNumM :: ImapConnection -> m MailNumber
   idleOrSleepM :: ImapConnection -> Timeout -> IdleMode -> m ()
 
 newtype DBusClient = DBusClient {unDBusClient :: Client}
@@ -91,9 +95,12 @@ class (Monad m) => MonadWatchdog m where
   signalCheckedMailboxM :: Mailbox -> WatchdogState -> m ()
   notiftyWatchdogWhenAllMailboxesAreCheckedM :: WatchdogState -> m (Maybe ())
 
+newtype EnvVar = EnvVar Text
+  deriving newtype (ToString, ToText)
+
 class (Monad m) => MonadIORead m where
   readFileM :: FilePath -> m Text
-  lookupEnvM :: Text -> m (Maybe Text)
+  lookupEnvM :: Text -> m (Maybe EnvVar)
 
 class (Monad m, MonadUnliftIO m) => MonadAsync m where
   concurrentlyManyM :: (Traversable t) => t (m a) -> m (t a)
