@@ -3,7 +3,7 @@
 module MailNotifier.Utils
   ( atomicallyTimeoutUntilFail_,
     busName,
-    interface,
+    interfaceName,
     mkLogAction,
     objectPath,
     syncNotificationMethodName,
@@ -65,8 +65,8 @@ busName = DBusBusName "tech.linj.MailNotifier"
 objectPath :: DBusObjectPath
 objectPath = DBusObjectPath "/tech/linj/MailNotifier"
 
-interface :: DBusInterfaceName
-interface = DBusInterfaceName "tech.linj.MailNotifier"
+interfaceName :: DBusInterfaceName
+interfaceName = DBusInterfaceName "tech.linj.MailNotifier"
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message
 mkLogAction severity =

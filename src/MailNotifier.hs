@@ -7,7 +7,7 @@ import MailNotifier.Mail (watch)
 import MailNotifier.Types
 import MailNotifier.Utils
   ( busName,
-    interface,
+    interfaceName,
     muaSyncSignalName,
     objectPath,
     syncNotificationMethodName,
@@ -72,7 +72,7 @@ app = do
   logDebug $ show config
   password <- readFileM (passwordFile config)
   warnConfig =<< lookupEnvM "WATCHDOG_USEC"
-  logInfo $ "DBus: " <> show busName <> " " <> show objectPath <> " " <> show interface
+  logInfo $ "DBus: " <> show busName <> " " <> show objectPath <> " " <> show interfaceName
   let imapSettings =
         defaultSettingsIMAPSSL
           { sslMaxLineLength = 100_000,
@@ -87,7 +87,7 @@ emitSignal :: (WithLog env Message m, HasSyncJobQueue env, MonadDBus m) => DBusC
 emitSignal client = infinitely $ do
   queue <- asks getSyncJobQueue
   waitSyncJobsM queue 1_000_000
-  emitM client objectPath interface muaSyncSignalName
+  emitM client objectPath interfaceName muaSyncSignalName
   logInfo $ "emitted signal: " <> show muaSyncSignalName
 
 -- TODO try to add some log
@@ -100,13 +100,13 @@ appDBusBroker client = do
   requestNameM client busName
   logInfo $ "requested " <> show busName
   queue <- asks getSyncJobQueue
-  exportM client objectPath interface syncNotificationMethodName (getSyncNotification queue)
+  exportM client objectPath interfaceName syncNotificationMethodName (getSyncNotification queue)
   logInfo
     $ "exported method "
     <> show syncNotificationMethodName
     <> " at "
     <> show objectPath
     <> " "
-    <> show interface
+    <> show interfaceName
   logInfo "wait for sync notifications"
   emitSignal client

@@ -3,7 +3,7 @@ module MailNotifier.DBus (sync) where
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
 import Data.Text qualified as T
 import MailNotifier.Types
-import MailNotifier.Utils (busName, interface, objectPath, syncNotificationMethodName)
+import MailNotifier.Utils (busName, interfaceName, objectPath, syncNotificationMethodName)
 import Relude
 
 sync ::
@@ -22,7 +22,7 @@ sync client = infinitely $ do
         unAccountName $ accountName config
       ]
   unless (T.null output) $ logWarning ("sync output: " <> output) -- has warnings
-  signalSyncDoneM client busName objectPath interface syncNotificationMethodName
+  signalSyncDoneM client busName objectPath interfaceName syncNotificationMethodName
   logDebug
     $ "DBus: called method "
     <> show syncNotificationMethodName
@@ -31,5 +31,5 @@ sync client = infinitely $ do
     <> " "
     <> show objectPath
     <> " "
-    <> show interface
+    <> show interfaceName
   logInfo "sent a synced notification"
