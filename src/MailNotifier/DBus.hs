@@ -7,9 +7,7 @@ import MailNotifier.Utils (busName, interface, objectPath, syncNotificationMetho
 import Relude
 
 sync ::
-  (WithLog env Message m, HasConfig env, HasSyncJobQueue env, MonadSync m) =>
-  DBusClient ->
-  m Void
+  (WithLog env Message m, HasConfig env, HasSyncJobQueue env, MonadSync m) => DBusClient -> m Void
 sync client = infinitely $ do
   config <- asks getConfig
   logInfo "wait for sync jobs"
