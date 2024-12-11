@@ -52,6 +52,8 @@ library
     MailNotifier.Exception
     MailNotifier.Mail
     MailNotifier.Types
+    MailNotifier.Types.Main
+    MailNotifier.Types.Timeout
     MailNotifier.Utils
     MailNotifier.Watchdog
 

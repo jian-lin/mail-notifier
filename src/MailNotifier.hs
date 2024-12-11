@@ -41,7 +41,9 @@ warnConfig mWatchdogTimeoutString = do
   case mWatchdogTimeoutString >>= (readMaybe . toString) of
     Just watchdogTimeout ->
       when
-        (watchdogTimeout <= pollInterval config || watchdogTimeout <= (idleTimeout config * 1_000))
+        ( (watchdogTimeout <= unTimeout (pollInterval config))
+            || (watchdogTimeout <= unTimeout (idleTimeout config * 1_000))
+        )
         $ logWarning
         $ "systemd WatchdogSec ("
         <> show watchdogTimeout

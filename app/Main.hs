@@ -11,8 +11,12 @@ import Options.Applicative.NonEmpty (some1)
 import Relude
 import UnliftIO (newTBQueue)
 
+timeoutReader :: String -> Either String Timeout
+timeoutReader s = do
+  timeout <- first toString $ readEither s
+  first show $ mkTimeout timeout
+
 -- TODO split this big parser into smaller ones and then compose those small ones
--- TODO parse this more strict: positive integer within maxBound :: Int
 configParser :: Parser Config
 configParser =
   Config
@@ -48,8 +52,8 @@ configParser =
               <> O.help "Mailboxes to watch"
           )
       )
-    <*> O.option -- TODO warn if too long since conn may be cut by middle boxes
-      O.auto
+    <*> O.option
+      (O.eitherReader timeoutReader)
       ( O.long "idle-timeout"
           <> O.metavar "MILLISECOND"
           <> O.showDefault
@@ -57,15 +61,15 @@ configParser =
           <> O.help "Timeout for IMAP IDLE command"
       )
     <*> O.option
-      O.auto
+      (O.eitherReader timeoutReader)
       ( O.long "read-sync-jobs-timeout"
           <> O.metavar "MICROSECOND"
           <> O.showDefault
           <> O.value 5_000_000
           <> O.help "Timeout for reading following sync jobs before performing one sync"
       )
-    <*> O.option -- TODO warn if too long since conn may be cut by middle boxes
-      O.auto
+    <*> O.option
+      (O.eitherReader timeoutReader)
       ( O.long "poll-interval"
           <> O.metavar "MICROSECOND"
           <> O.showDefault
