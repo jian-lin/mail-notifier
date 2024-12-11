@@ -40,7 +40,7 @@ data Config = Config
   }
   deriving stock (Show)
 
--- TODO are there better ways to do HasConfig, HasSyncJobQueue and HasWatchdogQueue?
+-- TODO optional: use lens to simplify instance definitions for HashFoo
 class HasConfig env where
   getConfig :: env -> Config
 
