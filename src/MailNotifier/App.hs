@@ -17,13 +17,7 @@ import DBus.Internal.Message (Signal (..))
 import Data.HashMap.Strict (elems, lookup)
 import MailNotifier.Exception
 import MailNotifier.Types
-import MailNotifier.Utils
-  ( atomicallyTimeoutUntilFail_,
-    busName,
-    interface,
-    objectPath,
-    syncNotificationMethodName,
-  )
+import MailNotifier.Utils (atomicallyTimeoutUntilFail_)
 import Network.HaskellNet.IMAP.Connection (exists)
 import Network.HaskellNet.IMAP.SSL (capability, idle, list, login, select)
 import Relude
@@ -62,20 +56,20 @@ instance MonadMailRead (App env) where
 instance MonadSync (App env) where
   addSyncJobM (SyncJobQueue queue) = atomically $ writeTBQueue queue ()
   waitForSyncJobsM (SyncJobQueue queue) timeout = do
-    _ <- atomically $ readTBQueue queue
+    atomically $ readTBQueue queue
     atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue
   syncM program args = toText <$> readProcess program (toString <$> args) ""
 
   -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
-  signalSyncDoneM (DBusClient client) =
+  signalSyncDoneM client busName objectPath interfaceName signalName =
     liftIO
       $ void
       $ call_
-        client
+        (unDBusClient client)
         ( methodCall
             (unDBusObjectPath objectPath)
-            (unDBusInterfaceName interface)
-            (unDBusMemberName syncNotificationMethodName)
+            (unDBusInterfaceName interfaceName)
+            (unDBusMemberName signalName)
         )
           { methodCallDestination = Just (unDBusBusName busName)
           }
@@ -101,32 +95,32 @@ instance MonadAsync (App env) where
   concurrentlyManyM = mapConcurrently id
 
 instance MonadDBus (App env) where
-  requestNameM (DBusClient client) busName' = do
-    reply <- liftIO $ requestName client (unDBusBusName busName') [nameDoNotQueue]
+  requestNameM client busName = do
+    reply <- liftIO $ requestName (unDBusClient client) (unDBusBusName busName) [nameDoNotQueue]
     when (reply /= NamePrimaryOwner)
       $ throwIO
-      $ DBusRequestNameError busName'
+      $ DBusRequestNameError busName
       $ DBusRequestNameReply reply
-  exportM (DBusClient client) (DBusObjectPath objPath) (DBusInterfaceName ifName) (DBusMemberName methodName) action =
+  exportM client objectPath interfaceName methodName action =
     liftIO
       $ export
-        client
-        objPath
+        (unDBusClient client)
+        (unDBusObjectPath objectPath)
         defaultInterface
-          { interfaceName = ifName,
-            interfaceMethods = [autoMethod methodName action]
+          { interfaceName = unDBusInterfaceName interfaceName,
+            interfaceMethods = [autoMethod (unDBusMemberName methodName) action]
           }
   waitSyncJobsM (SyncJobQueue queue) timeout = do
     atomically $ readTBQueue queue
     atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue
-  emitM (DBusClient client) (DBusObjectPath objPath) (DBusInterfaceName ifName) (DBusMemberName signalName) = do
+  emitM client objectPath interfaceName signalName = do
     let signal =
           Signal
-            { signalPath = objPath,
-              signalInterface = ifName,
-              signalMember = signalName,
+            { signalPath = unDBusObjectPath objectPath,
+              signalInterface = unDBusInterfaceName interfaceName,
+              signalMember = unDBusMemberName signalName,
               signalSender = Nothing,
               signalDestination = Nothing,
               signalBody = []
             }
-    liftIO $ emit client signal
+    liftIO $ emit (unDBusClient client) signal

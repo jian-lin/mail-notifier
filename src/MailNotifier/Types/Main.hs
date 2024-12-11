@@ -89,7 +89,13 @@ class (Monad m) => MonadSync m where
   waitForSyncJobsM :: SyncJobQueue -> Timeout -> m ()
 
   syncM :: FilePath -> [Text] -> m Text
-  signalSyncDoneM :: DBusClient -> m ()
+  signalSyncDoneM ::
+    DBusClient ->
+    DBusBusName ->
+    DBusObjectPath ->
+    DBusInterfaceName ->
+    DBusMemberName ->
+    m ()
 
 class (Monad m) => MonadWatchdog m where
   signalCheckedMailboxM :: Mailbox -> WatchdogState -> m ()

@@ -22,7 +22,7 @@ sync client = infinitely $ do
         unAccountName $ accountName config
       ]
   unless (T.null output) $ logWarning ("sync output: " <> output) -- has warnings
-  signalSyncDoneM client
+  signalSyncDoneM client busName objectPath interface syncNotificationMethodName
   logDebug
     $ "DBus: called method "
     <> show syncNotificationMethodName
