@@ -108,7 +108,7 @@ class (Monad m) => MonadWatchdog m where
   notiftyWatchdogWhenAllMailboxesAreCheckedM :: WatchdogState -> m (Maybe ())
 
 newtype EnvVar = EnvVar Text
-  deriving newtype (ToString, ToText)
+  deriving newtype (ToString)
 
 class (Monad m) => MonadIORead m where
   readFileM :: FilePath -> m Text
@@ -128,7 +128,6 @@ newtype DBusInterfaceName = DBusInterfaceName {unDBusInterfaceName :: InterfaceN
 
 newtype DBusMemberName = DBusMemberName {unDBusMemberName :: MemberName}
   deriving stock (Show)
-  deriving newtype (IsString)
 
 newtype DBusRequestNameReply = DBusRequestNameReply RequestNameReply
   deriving stock (Show)
