@@ -1,9 +1,21 @@
 module MailNotifier.App where
 
 import DBus (methodCall, methodCallDestination)
-import DBus.Client (call_)
+import DBus.Client
+  ( RequestNameReply (NamePrimaryOwner),
+    autoMethod,
+    call_,
+    defaultInterface,
+    emit,
+    export,
+    interfaceMethods,
+    interfaceName,
+    nameDoNotQueue,
+    requestName,
+  )
+import DBus.Internal.Message (Signal (..))
 import Data.HashMap.Strict (elems, lookup)
-import MailNotifier.Exception (PasswordDecodeException (..), WatchdogMailboxError (..))
+import MailNotifier.Exception
 import MailNotifier.Types
 import MailNotifier.Utils
   ( atomicallyTimeoutUntilFail_,
@@ -21,13 +33,20 @@ import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcess)
 import UnliftIO.STM (readTBQueue, writeTBQueue)
 
-newtype App a = App {runApp :: ReaderT (Env App) IO a}
-  deriving newtype (Functor, Applicative, Monad, MonadReader (Env App), MonadIO, MonadUnliftIO)
+newtype App (env :: (Type -> Type) -> Type) a = App {runApp :: ReaderT (env (App env)) IO a}
+  deriving newtype
+    ( Functor,
+      Applicative,
+      Monad,
+      MonadReader (env (App env)),
+      MonadIO,
+      MonadUnliftIO
+    )
 
-run :: App a -> Env App -> IO a
+run :: App env a -> env (App env) -> IO a
 run app = runReaderT (runApp app)
 
-instance MonadMailRead App where
+instance MonadMailRead (App env) where
   loginM (ImapConnection conn) (Username username) (Password password) =
     liftIO $ login conn (toString username) (toString password)
   getCapabilitiesM (ImapConnection conn) = liftIO $ (Capability . toText) <<$>> capability conn
@@ -40,7 +59,7 @@ instance MonadMailRead App where
         then idle conn (fromInteger timeout)
         else threadDelay (fromInteger timeout)
 
-instance MonadSync App where
+instance MonadSync (App env) where
   addSyncJobM (SyncJobQueue queue) = atomically $ writeTBQueue queue ()
   waitForSyncJobsM (SyncJobQueue queue) timeout = do
     _ <- atomically $ readTBQueue queue
@@ -61,7 +80,7 @@ instance MonadSync App where
           { methodCallDestination = Just (unDBusBusName busName)
           }
 
-instance MonadWatchdog App where
+instance MonadWatchdog (App env) where
   signalCheckedMailboxM mailbox (WatchdogState watchdogState) =
     case lookup mailbox watchdogState of
       Just stateOfThisMailbox -> void $ atomically $ tryPutTMVar stateOfThisMailbox ()
@@ -70,7 +89,7 @@ instance MonadWatchdog App where
     atomically $ mapM_ takeTMVar $ elems watchdogState
     liftIO notifyWatchdog
 
-instance MonadIORead App where
+instance MonadIORead (App env) where
   readFileM filePath = do
     eContent <- decodeUtf8' <$> readFileBS filePath
     case eContent of
@@ -78,5 +97,36 @@ instance MonadIORead App where
       Right content -> pure content
   lookupEnvM = (fmap . fmap) toText . lookupEnv . toString
 
-instance MonadAsync App where
+instance MonadAsync (App env) where
   concurrentlyManyM = mapConcurrently id
+
+instance MonadDBus (App env) where
+  requestNameM (DBusClient client) busName' = do
+    reply <- liftIO $ requestName client (unDBusBusName busName') [nameDoNotQueue]
+    when (reply /= NamePrimaryOwner)
+      $ throwIO
+      $ DBusRequestNameError busName'
+      $ DBusRequestNameReply reply
+  exportM (DBusClient client) (DBusObjectPath objPath) (DBusInterfaceName ifName) (DBusMemberName methodName) action =
+    liftIO
+      $ export
+        client
+        objPath
+        defaultInterface
+          { interfaceName = ifName,
+            interfaceMethods = [autoMethod methodName action]
+          }
+  waitSyncJobsM (SyncJobQueue queue) timeout = do
+    atomically $ readTBQueue queue
+    atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue
+  emitM (DBusClient client) (DBusObjectPath objPath) (DBusInterfaceName ifName) (DBusMemberName signalName) = do
+    let signal =
+          Signal
+            { signalPath = objPath,
+              signalInterface = ifName,
+              signalMember = signalName,
+              signalSender = Nothing,
+              signalDestination = Nothing,
+              signalBody = []
+            }
+    liftIO $ emit client signal

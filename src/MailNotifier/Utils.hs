@@ -7,6 +7,7 @@ module MailNotifier.Utils
     mkLogAction,
     objectPath,
     syncNotificationMethodName,
+    muaSyncSignalName,
     withDBus,
     withImap,
   )
@@ -88,3 +89,6 @@ mkLogAction severity =
 
 syncNotificationMethodName :: DBusMemberName
 syncNotificationMethodName = DBusMemberName "Notify"
+
+muaSyncSignalName :: DBusMemberName
+muaSyncSignalName = DBusMemberName "Synced"

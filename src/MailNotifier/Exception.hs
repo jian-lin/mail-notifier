@@ -12,3 +12,7 @@ newtype PasswordDecodeException = PasswordDecodeException UnicodeException
 newtype WatchdogMailboxError = WatchdogMailboxError Mailbox
   deriving stock (Show)
   deriving anyclass (Exception)
+
+data DBusRequestNameError = DBusRequestNameError DBusBusName DBusRequestNameReply
+  deriving stock (Show)
+  deriving anyclass (Exception)

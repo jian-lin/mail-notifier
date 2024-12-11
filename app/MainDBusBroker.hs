@@ -1,10 +1,27 @@
 module Main (main) where
 
-import Colog (Severity (Info))
-import MailNotifier.DBusBroker (Env (..), Queue (..), app, run)
+import Colog (HasLog (..), LogAction, Message, Severity (Info))
+import MailNotifier (appDBusBroker)
+import MailNotifier.App (run)
+import MailNotifier.Types
 import MailNotifier.Utils (mkLogAction, withDBus)
 import Relude
 import UnliftIO (newTBQueue)
+
+data Env m = Env
+  { envLogAction :: !(LogAction m Message),
+    envSyncJobQueue :: !SyncJobQueue
+  }
+
+instance HasLog (Env m) Message m where
+  getLogAction = envLogAction
+  {-# INLINE getLogAction #-}
+  setLogAction newLogAction env = env {envLogAction = newLogAction}
+  {-# INLINE setLogAction #-}
+
+instance HasSyncJobQueue (Env m) where
+  getSyncJobQueue = envSyncJobQueue
+  {-# INLINE getSyncJobQueue #-}
 
 main :: IO ()
 main = do
@@ -13,6 +30,6 @@ main = do
   let env =
         Env
           { envLogAction = mkLogAction Info,
-            envQueue = Queue queue
+            envSyncJobQueue = SyncJobQueue queue
           }
-  fmap absurd $ withDBus $ \client -> run (app client) env
+  fmap absurd $ withDBus $ \client -> run (appDBusBroker client) env

@@ -1,9 +1,8 @@
 module Main (main) where
 
-import Colog (Severity (Info))
-import Data.HashMap.Strict qualified as HM
+import Colog (HasLog (..), LogAction, Message, Severity (Info))
 import MailNotifier (app)
-import MailNotifier.App
+import MailNotifier.App (run)
 import MailNotifier.Types
 import MailNotifier.Utils (mkLogAction)
 import Options.Applicative (Parser)
@@ -91,6 +90,31 @@ parseConfig =
       (configParser <**> O.helper <**> O.simpleVersioner "0.1.0.0")
       (O.fullDesc <> O.progDesc "A tool to immediately run mbsync and notify your MUA for new mails")
 
+data Env m = Env
+  { envLogAction :: !(LogAction m Message),
+    envSyncJobQueue :: !SyncJobQueue,
+    envWatchdogState :: !WatchdogState,
+    envConfig :: !Config
+  }
+
+instance HasLog (Env m) Message m where
+  getLogAction = envLogAction
+  {-# INLINE getLogAction #-}
+  setLogAction newLogAction env = env {envLogAction = newLogAction}
+  {-# INLINE setLogAction #-}
+
+instance HasConfig (Env m) where
+  getConfig = envConfig
+  {-# INLINE getConfig #-}
+
+instance HasSyncJobQueue (Env m) where
+  getSyncJobQueue = envSyncJobQueue
+  {-# INLINE getSyncJobQueue #-}
+
+instance HasWatchdogState (Env m) where
+  getWatchdogState = envWatchdogState
+  {-# INLINE getWatchdogState #-}
+
 main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering -- print log while running under systemd
@@ -104,7 +128,7 @@ main = do
         Env
           { envLogAction = mkLogAction $ logLevel config,
             envSyncJobQueue = SyncJobQueue syncJobQueue,
-            envWatchdogState = WatchdogState $ HM.fromList $ zip (toList $ mailboxes config) vs,
+            envWatchdogState = WatchdogState $ fromList $ zip (toList $ mailboxes config) vs,
             envConfig = config
           }
   foldMap absurd <$> run app env
