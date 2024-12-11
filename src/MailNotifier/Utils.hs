@@ -1,5 +1,3 @@
-{-# LANGUAGE ViewPatterns #-}
-
 module MailNotifier.Utils
   ( atomicallyTimeoutUntilFail_,
     busName,
@@ -13,23 +11,7 @@ module MailNotifier.Utils
   )
 where
 
-import Colog
-  ( LogAction,
-    Message,
-    Msg (..),
-    RichMessage,
-    Severity (Debug),
-    cmapM,
-    defaultFieldMap,
-    filterBySeverity,
-    fmtRichMessageCustomDefault,
-    logByteStringStdout,
-    showSeverity,
-    showSourceLoc,
-    showThreadId,
-    showTime,
-    upgradeMessageAction,
-  )
+import Colog (LogAction, Message, Msg (msgSeverity), Severity, filterBySeverity, richMessageAction)
 import DBus.Client (connectSystem, disconnect)
 import MailNotifier.Types
 import Network.HaskellNet.IMAP.SSL
@@ -74,23 +56,7 @@ interfaceName :: DBusInterfaceName
 interfaceName = DBusInterfaceName "tech.linj.MailNotifier"
 
 mkLogAction :: (MonadIO m) => Severity -> LogAction m Message
-mkLogAction severity =
-  let -- modified from fmtRichMessageDefault
-      fmtRichMessage :: (MonadIO m) => RichMessage m -> m Text
-      fmtRichMessage richMsg =
-        let formatRichMessage (maybe "" showThreadId -> thread) (maybe "" showTime -> time) msg =
-              showSeverity (msgSeverity msg)
-                <> (if severity <= Debug then time else mempty)
-                <> (if severity <= Debug then showSourceLoc (msgStack msg) else mempty)
-                <> thread
-                <> msgText msg
-         in fmtRichMessageCustomDefault richMsg formatRichMessage
-      -- modified from richMessageAction
-      logAction :: (MonadIO m) => LogAction m Message
-      logAction =
-        upgradeMessageAction defaultFieldMap
-          $ cmapM (fmap encodeUtf8 . fmtRichMessage) logByteStringStdout
-   in filterBySeverity severity msgSeverity logAction
+mkLogAction severity = filterBySeverity severity msgSeverity richMessageAction
 
 syncNotificationMethodName :: DBusMemberName
 syncNotificationMethodName = DBusMemberName "Notify"
