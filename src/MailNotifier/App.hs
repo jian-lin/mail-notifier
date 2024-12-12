@@ -18,8 +18,8 @@ import Data.HashMap.Strict (elems, lookup)
 import MailNotifier.Exception
 import MailNotifier.Types
 import MailNotifier.Utils (atomicallyTimeoutUntilFail_)
+import Network.HaskellNet.IMAP (capability, idle, list, login, select)
 import Network.HaskellNet.IMAP.Connection (exists)
-import Network.HaskellNet.IMAP.SSL (capability, idle, list, login, select)
 import Relude
 import System.Systemd.Daemon (notifyWatchdog)
 import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)

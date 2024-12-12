@@ -14,11 +14,11 @@ where
 import Colog (LogAction, Message, Msg (msgSeverity), Severity, filterBySeverity, richMessageAction)
 import DBus.Client (connectSystem, disconnect)
 import MailNotifier.Types
+import Network.HaskellNet.IMAP (logout)
 import Network.HaskellNet.IMAP.SSL
   ( Settings (..),
     connectIMAPSSLWithSettings,
     defaultSettingsIMAPSSL,
-    logout,
   )
 import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
