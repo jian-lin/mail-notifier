@@ -19,7 +19,7 @@ sync client = infinitely $ do
       "/run/wrappers/bin/mbsyncSetuid"
       [ "--config",
         toText $ mbsyncConfigFile config,
-        unAccountName $ accountName config
+        toText $ accountName config
       ]
   unless (T.null output) $ logWarning ("sync output: " <> output) -- has warnings
   signalSyncDoneM client busName objectPath interfaceName syncNotificationMethodName

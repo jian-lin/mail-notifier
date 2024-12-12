@@ -19,9 +19,9 @@ newtype Username = Username Text
 
 newtype Password = Password Text
 
-newtype AccountName = AccountName {unAccountName :: Text}
+newtype AccountName = AccountName Text
   deriving stock (Show)
-  deriving newtype (IsString)
+  deriving newtype (IsString, ToText)
 
 newtype Server = Server Text
   deriving stock (Show)
