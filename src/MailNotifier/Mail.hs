@@ -4,12 +4,6 @@ import Colog (Message, WithLog, logDebug, logInfo)
 import MailNotifier.Types
 import Relude
 
--- TODO exit with different exit code to indicate if restarting this program by system is desirable
--- e.g., if password is wrong, do not restart
---       if network connection is unavailable, restart
--- is it worth it?  Doesn't almost all "no need to restart" cases lead to a quick crash?
--- So if it runs fine for a while, it should be restarted if crashes.
--- Two exceptions I can think of are (1) the password is changed and (2) the mailbox is deleted.
 watch ::
   ( WithLog env Message m,
     HasConfig env,

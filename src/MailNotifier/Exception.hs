@@ -2,7 +2,6 @@
 
 module MailNotifier.Exception where
 
-import DBus.Client (ClientError)
 import MailNotifier.Types
 import Relude
 import UnliftIO (IOException)
@@ -19,11 +18,11 @@ data DBusRequestNameFailed = DBusRequestNameFailed DBusBusName DBusRequestNameRe
   deriving stock (Show)
   deriving anyclass (Exception)
 
-data DBusRequestNameCallError = DBusRequestNameCallError DBusBusName ClientError
+data DBusRequestNameCallError = DBusRequestNameCallError DBusBusName DBusClientError
   deriving stock (Show)
   deriving anyclass (Exception)
 
-data DBusEmitError = DBusEmitError DBusObjectPath DBusInterfaceName DBusMemberName ClientError
+data DBusEmitError = DBusEmitError DBusObjectPath DBusInterfaceName DBusMemberName DBusClientError
   deriving stock (Show)
   deriving anyclass (Exception)
 
@@ -52,6 +51,6 @@ data SyncExternalProcessError = SyncExternalProcessError FilePath [Text] IOExcep
   deriving anyclass (Exception)
 
 data SyncDBusError
-  = SyncDBusError DBusBusName DBusObjectPath DBusInterfaceName DBusMemberName ClientError
+  = SyncDBusError DBusBusName DBusObjectPath DBusInterfaceName DBusMemberName DBusClientError
   deriving stock (Show)
   deriving anyclass (Exception)

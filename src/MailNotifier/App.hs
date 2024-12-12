@@ -74,7 +74,7 @@ instance MonadSync (App env) where
 
   -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
   signalSyncDoneM client busName objectPath interfaceName signalName =
-    handle (throwIO . SyncDBusError busName objectPath interfaceName signalName)
+    handle (throwIO . SyncDBusError busName objectPath interfaceName signalName . DBusClientError)
       $ liftIO
       $ void
       $ call_
@@ -110,7 +110,7 @@ instance MonadAsync (App env) where
 instance MonadDBus (App env) where
   requestNameM client busName = do
     reply <-
-      handle (throwIO . DBusRequestNameCallError busName)
+      handle (throwIO . DBusRequestNameCallError busName . DBusClientError)
         $ liftIO
         $ requestName (unDBusClient client) (unDBusBusName busName) [nameDoNotQueue]
     when (reply /= NamePrimaryOwner)
@@ -139,6 +139,6 @@ instance MonadDBus (App env) where
               signalDestination = Nothing,
               signalBody = []
             }
-    handle (throwIO . DBusEmitError objectPath interfaceName signalName)
+    handle (throwIO . DBusEmitError objectPath interfaceName signalName . DBusClientError)
       $ liftIO
       $ emit (unDBusClient client) signal

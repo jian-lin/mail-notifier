@@ -2,7 +2,7 @@ module MailNotifier.Types.Main where
 
 import Colog (Severity)
 import DBus (BusName, InterfaceName, MemberName, ObjectPath)
-import DBus.Client (Client, RequestNameReply)
+import DBus.Client (Client, ClientError, RequestNameReply)
 import Data.Text (toLower)
 import MailNotifier.Types.Timeout (Timeout)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
@@ -131,6 +131,9 @@ newtype DBusMemberName = DBusMemberName {unDBusMemberName :: MemberName}
   deriving stock (Show)
 
 newtype DBusRequestNameReply = DBusRequestNameReply RequestNameReply
+  deriving stock (Show)
+
+newtype DBusClientError = DBusClientError ClientError
   deriving stock (Show)
 
 class (Monad m) => MonadDBus m where
