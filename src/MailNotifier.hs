@@ -108,5 +108,6 @@ appDBusBroker client = do
     <> show objectPath
     <> " "
     <> show interfaceName
+  notifySystemdReadyM
   logInfo "wait for sync notifications"
   emitSignal client

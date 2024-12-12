@@ -22,7 +22,7 @@ import Network.HaskellNet.IMAP (capability, idle, list, login, select)
 import Network.HaskellNet.IMAP.Connection (exists)
 import Relude
 import System.Exit (ExitCode (ExitSuccess))
-import System.Systemd.Daemon (notifyWatchdog)
+import System.Systemd.Daemon (notifyReady, notifyWatchdog)
 import UnliftIO (MonadUnliftIO, handle, handleAny, mapConcurrently, throwIO)
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcessWithExitCode)
@@ -131,6 +131,7 @@ instance MonadDBus (App env) where
           { interfaceName = unDBusInterfaceName interfaceName,
             interfaceMethods = [autoMethod (unDBusMemberName methodName) action]
           }
+  notifySystemdReadyM = liftIO $ void notifyReady
   waitSyncJobsM (SyncJobQueue queue) timeout = do
     atomically $ readTBQueue queue
     atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue

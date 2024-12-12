@@ -148,6 +148,7 @@ class (Monad m) => MonadDBus m where
     DBusMemberName ->
     DBusExportedAction ->
     m ()
+  notifySystemdReadyM :: m ()
   waitSyncJobsM :: SyncJobQueue -> Timeout -> m ()
   emitM :: DBusClient -> DBusObjectPath -> DBusInterfaceName -> DBusMemberName -> m ()
 
