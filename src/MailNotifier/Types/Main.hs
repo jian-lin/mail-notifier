@@ -15,9 +15,10 @@ newtype WatchdogState = WatchdogState (HashMap Mailbox (TMVar ()))
 
 newtype Username = Username Text
   deriving stock (Show)
-  deriving newtype (IsString)
+  deriving newtype (IsString, ToString)
 
 newtype Password = Password Text
+  deriving newtype (ToString)
 
 newtype AccountName = AccountName Text
   deriving stock (Show)
@@ -69,7 +70,7 @@ data ImapConfig = ImapConfig
 
 newtype Mailbox = Mailbox Text
   deriving stock (Show, Eq)
-  deriving newtype (Hashable, IsString)
+  deriving newtype (Hashable, IsString, ToString)
 
 data IdleMode = Idle | Sleep deriving stock (Eq)
 

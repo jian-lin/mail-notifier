@@ -22,7 +22,7 @@ import Network.HaskellNet.IMAP (capability, idle, list, login, select)
 import Network.HaskellNet.IMAP.Connection (exists)
 import Relude
 import System.Systemd.Daemon (notifyWatchdog)
-import UnliftIO (MonadUnliftIO, mapConcurrently, throwIO)
+import UnliftIO (MonadUnliftIO, handle, handleAny, mapConcurrently, throwIO)
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcess)
 import UnliftIO.STM (readTBQueue, writeTBQueue)
@@ -41,14 +41,23 @@ run :: App env a -> env (App env) -> IO a
 run app = runReaderT (runApp app)
 
 instance MonadMailRead (App env) where
-  loginM (ImapConnection conn) (Username username) (Password password) =
-    liftIO $ login conn (toString username) (toString password)
-  getCapabilitiesM (ImapConnection conn) = liftIO $ (Capability . toText) <<$>> capability conn
-  listMailboxesM (ImapConnection conn) = liftIO $ (Mailbox . toText . snd) <<$>> list conn
-  selectMailboxM (ImapConnection conn) (Mailbox mailbox) = liftIO $ select conn (toString mailbox)
+  loginM (ImapConnection conn) username password =
+    handleAny (throwIO . MailLoginError username)
+      $ liftIO
+      $ login conn (toString username) (toString password)
+  getCapabilitiesM (ImapConnection conn) =
+    handleAny (throwIO . MailGetCapabilityError)
+      $ liftIO (Capability . toText <<$>> capability conn)
+  listMailboxesM (ImapConnection conn) =
+    handleAny (throwIO . MailListMailboxError)
+      $ liftIO (Mailbox . toText . snd <<$>> list conn)
+  selectMailboxM (ImapConnection conn) mailbox =
+    handleAny (throwIO . MailSelectMailboxError mailbox)
+      $ liftIO (select conn (toString mailbox))
   getMailNumM (ImapConnection conn) = liftIO $ MailNumber <$> exists conn
   idleOrSleepM (ImapConnection conn) timeout mode =
-    liftIO
+    handleAny (throwIO . MailIdleOrSleepError timeout)
+      $ liftIO
       $ if mode == Idle
         then idle conn (fromInteger $ unTimeout timeout)
         else threadDelay (fromInteger $ unTimeout timeout)
@@ -58,11 +67,15 @@ instance MonadSync (App env) where
   waitForSyncJobsM (SyncJobQueue queue) timeout = do
     atomically $ readTBQueue queue
     atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue
-  syncM program args = toText <$> readProcess program (toString <$> args) ""
+  syncM program args =
+    handle
+      (throwIO . SyncExternalProcessError program args)
+      (toText <$> readProcess program (toString <$> args) "")
 
   -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
   signalSyncDoneM client busName objectPath interfaceName signalName =
-    liftIO
+    handle (throwIO . SyncDBusError busName objectPath interfaceName signalName)
+      $ liftIO
       $ void
       $ call_
         (unDBusClient client)
@@ -96,10 +109,13 @@ instance MonadAsync (App env) where
 
 instance MonadDBus (App env) where
   requestNameM client busName = do
-    reply <- liftIO $ requestName (unDBusClient client) (unDBusBusName busName) [nameDoNotQueue]
+    reply <-
+      handle (throwIO . DBusRequestNameCallError busName)
+        $ liftIO
+        $ requestName (unDBusClient client) (unDBusBusName busName) [nameDoNotQueue]
     when (reply /= NamePrimaryOwner)
       $ throwIO
-      $ DBusRequestNameError busName
+      $ DBusRequestNameFailed busName
       $ DBusRequestNameReply reply
   exportM client objectPath interfaceName methodName action =
     liftIO
@@ -123,4 +139,6 @@ instance MonadDBus (App env) where
               signalDestination = Nothing,
               signalBody = []
             }
-    liftIO $ emit (unDBusClient client) signal
+    handle (throwIO . DBusEmitError objectPath interfaceName signalName)
+      $ liftIO
+      $ emit (unDBusClient client) signal
