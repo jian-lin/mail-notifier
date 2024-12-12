@@ -16,7 +16,6 @@ timeoutReader s = do
   timeout <- first toString $ readEither s
   first show $ mkTimeout timeout
 
--- TODO split this big parser into smaller ones and then compose those small ones
 configParser :: Parser Config
 configParser =
   Config
