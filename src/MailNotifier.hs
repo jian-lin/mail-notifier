@@ -95,7 +95,12 @@ appDBusBroker client = do
   requestNameM client busName
   logInfo $ "requested " <> show busName
   queue <- asks getSyncJobQueue
-  exportM client objectPath interfaceName syncNotificationMethodName (getSyncNotification queue)
+  exportM
+    client
+    objectPath
+    interfaceName
+    syncNotificationMethodName
+    (DBusExportedAction $ getSyncNotification queue)
   logInfo
     $ "exported method "
     <> show syncNotificationMethodName
