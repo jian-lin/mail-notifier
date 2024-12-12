@@ -21,10 +21,11 @@ import MailNotifier.Utils (atomicallyTimeoutUntilFail_)
 import Network.HaskellNet.IMAP (capability, idle, list, login, select)
 import Network.HaskellNet.IMAP.Connection (exists)
 import Relude
+import System.Exit (ExitCode (ExitSuccess))
 import System.Systemd.Daemon (notifyWatchdog)
 import UnliftIO (MonadUnliftIO, handle, handleAny, mapConcurrently, throwIO)
 import UnliftIO.Concurrent (threadDelay)
-import UnliftIO.Process (readProcess)
+import UnliftIO.Process (readProcessWithExitCode)
 import UnliftIO.STM (readTBQueue, writeTBQueue)
 
 newtype App (env :: (Type -> Type) -> Type) a = App {runApp :: ReaderT (env (App env)) IO a}
@@ -67,10 +68,14 @@ instance MonadSync (App env) where
   waitForSyncJobsM (SyncJobQueue queue) timeout = do
     atomically $ readTBQueue queue
     atomicallyTimeoutUntilFail_ timeout $ readTBQueue queue
-  syncM program args =
-    handle
-      (throwIO . SyncExternalProcessError program args)
-      (toText <$> readProcess program (toString <$> args) "")
+  syncM program args = do
+    (exitCode, out, err) <- readProcessWithExitCode program (toString <$> args) ""
+    let out' = ProcessStdoutOutput $ toText out
+        err' = ProcessStderrOutput $ toText err
+    when (exitCode /= ExitSuccess)
+      $ throwIO
+      $ SyncExternalProcessError program args exitCode out' err'
+    pure (out', err')
 
   -- DBus tutrial: https://dbus.freedesktop.org/doc/dbus-tutorial.html
   signalSyncDoneM client busName objectPath interfaceName signalName =

@@ -14,14 +14,15 @@ sync client = infinitely $ do
   syncJobQueue <- asks getSyncJobQueue
   waitForSyncJobsM syncJobQueue (readSyncJobsTimeout config)
   logInfo "got sync jobs, start to sync"
-  output <-
+  (processStdoutOutput, processStderrOutput) <-
     syncM
       "/run/wrappers/bin/mbsyncSetuid"
       [ "--config",
         toText $ mbsyncConfigFile config,
         toText $ accountName config
       ]
-  unless (T.null output) $ logWarning ("sync output: " <> output) -- has warnings
+  unless (T.null $ toText processStdoutOutput) $ logInfo $ toText processStdoutOutput
+  unless (T.null $ toText processStderrOutput) $ logWarning $ toText processStderrOutput
   signalSyncDoneM client busName objectPath interfaceName syncNotificationMethodName
   logDebug
     $ "DBus: called method "

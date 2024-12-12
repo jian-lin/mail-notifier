@@ -4,7 +4,7 @@ module MailNotifier.Exception where
 
 import MailNotifier.Types
 import Relude
-import UnliftIO (IOException)
+import System.Exit (ExitCode)
 
 newtype PasswordDecodeException = PasswordDecodeException UnicodeException
   deriving stock (Show)
@@ -46,7 +46,8 @@ data MailIdleOrSleepError = MailIdleOrSleepError Timeout SomeException
   deriving stock (Show)
   deriving anyclass (Exception)
 
-data SyncExternalProcessError = SyncExternalProcessError FilePath [Text] IOException
+data SyncExternalProcessError
+  = SyncExternalProcessError FilePath [Text] ExitCode ProcessStdoutOutput ProcessStderrOutput
   deriving stock (Show)
   deriving anyclass (Exception)
 

@@ -95,7 +95,7 @@ class (Monad m) => MonadSync m where
   -- following jobs which appears within 'Timeout' seconds from the last one.
   waitForSyncJobsM :: SyncJobQueue -> Timeout -> m ()
 
-  syncM :: FilePath -> [Text] -> m Text
+  syncM :: FilePath -> [Text] -> m (ProcessStdoutOutput, ProcessStderrOutput)
   signalSyncDoneM ::
     DBusClient ->
     DBusBusName ->
@@ -150,3 +150,11 @@ class (Monad m) => MonadDBus m where
     m ()
   waitSyncJobsM :: SyncJobQueue -> Timeout -> m ()
   emitM :: DBusClient -> DBusObjectPath -> DBusInterfaceName -> DBusMemberName -> m ()
+
+newtype ProcessStdoutOutput = ProcessStdoutOutput Text
+  deriving stock (Show)
+  deriving newtype (ToText)
+
+newtype ProcessStderrOutput = ProcessStderrOutput Text
+  deriving stock (Show)
+  deriving newtype (ToText)
