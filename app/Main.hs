@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main (main) where
 
 import Colog (HasLog (..), LogAction, Message, Severity (Info))
@@ -55,24 +57,24 @@ configParser =
       (O.eitherReader timeoutReader)
       ( O.long "idle-timeout"
           <> O.metavar "MILLISECOND"
-          <> O.showDefault
-          <> O.value (unsafeMkTimeout $ 2 * 60 * 1_000)
+          <> O.showDefaultWith (show . unTimeout)
+          <> O.value $(mkTimeoutTH $ 2 * 60 * 1_000)
           <> O.help "Timeout for IMAP IDLE command"
       )
     <*> O.option
       (O.eitherReader timeoutReader)
       ( O.long "read-sync-jobs-timeout"
           <> O.metavar "MICROSECOND"
-          <> O.showDefault
-          <> O.value (unsafeMkTimeout 5_000_000)
+          <> O.showDefaultWith (show . unTimeout)
+          <> O.value $(mkTimeoutTH 5_000_000)
           <> O.help "Timeout for reading following sync jobs before performing one sync"
       )
     <*> O.option
       (O.eitherReader timeoutReader)
       ( O.long "poll-interval"
           <> O.metavar "MICROSECOND"
-          <> O.showDefault
-          <> O.value (unsafeMkTimeout $ 2 * 60 * 1_000_000)
+          <> O.showDefaultWith (show . unTimeout)
+          <> O.value $(mkTimeoutTH $ 2 * 60 * 1_000_000)
           <> O.help "Interval for polling new mails (fallback if IDLE is not supported)"
       )
     <*> O.option

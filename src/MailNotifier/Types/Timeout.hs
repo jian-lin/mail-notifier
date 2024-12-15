@@ -2,17 +2,17 @@ module MailNotifier.Types.Timeout
   ( Timeout,
     mkTimeout,
     unTimeout,
-    unsafeMkTimeout,
   )
 where
 
+import Language.Haskell.TH.Syntax (Lift)
 import Relude
 
 data TimeoutError = NonPositiveTimeout | TooLargeTimeout
   deriving stock (Show)
 
 newtype Timeout = Timeout Integer
-  deriving stock (Show)
+  deriving stock (Show, Lift)
 
 mkTimeout :: Integer -> Either TimeoutError Timeout
 mkTimeout timeout
@@ -22,7 +22,3 @@ mkTimeout timeout
 
 unTimeout :: Timeout -> Integer
 unTimeout (Timeout timeout) = timeout
-
--- TODO find a way to remove this
-unsafeMkTimeout :: Integer -> Timeout
-unsafeMkTimeout timeout = either (error . show) id (mkTimeout timeout)

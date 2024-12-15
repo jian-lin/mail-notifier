@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module MailNotifier (app, appDBusBroker) where
 
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
@@ -81,7 +83,7 @@ app = do
 emitSignal :: (WithLog env Message m, HasSyncJobQueue env, MonadDBus m) => DBusClient -> m Void
 emitSignal client = infinitely $ do
   queue <- asks getSyncJobQueue
-  waitSyncJobsM queue (unsafeMkTimeout 1_000_000)
+  waitSyncJobsM queue $(mkTimeoutTH 1_000_000)
   emitM client objectPath interfaceName muaSyncSignalName
   logInfo $ "emitted signal: " <> show muaSyncSignalName
 
