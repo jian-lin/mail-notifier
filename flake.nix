@@ -45,7 +45,7 @@
       };
       packages.${system}.default = haskellPackages.generateOptparseApplicativeCompletions [
         "mail-notifier"
-      ] (pkgs.haskell.lib.compose.justStaticExecutables haskellPackages.${projectName});
+      ] (pkgs.haskell.lib.compose.enableSeparateBinOutput haskellPackages.${projectName});
       devShells.${system}.default = haskellPackages.shellFor {
         packages = hpkgs: [ hpkgs.${projectName} ];
         nativeBuildInputs =
