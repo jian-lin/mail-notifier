@@ -9,6 +9,8 @@ import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Relude
 import UnliftIO (MonadUnliftIO, TBQueue)
 
+-- TODO use OsPath and OsString when optparse-applicative, process (and relude) support them
+
 newtype SyncJobQueue = SyncJobQueue (TBQueue ())
 
 newtype WatchdogState = WatchdogState (HashMap Mailbox (TMVar ()))
