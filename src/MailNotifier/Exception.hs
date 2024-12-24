@@ -42,7 +42,11 @@ data MailSelectMailboxError = MailSelectMailboxError Mailbox SomeException
   deriving stock (Show)
   deriving anyclass (Exception)
 
-data MailIdleOrSleepError = MailIdleOrSleepError Timeout SomeException
+data MailIdleError = MailIdleError TimeoutMilliSecond SomeException
+  deriving stock (Show)
+  deriving anyclass (Exception)
+
+data MailSleepError = MailSleepError TimeoutMicroSecond SomeException
   deriving stock (Show)
   deriving anyclass (Exception)
 

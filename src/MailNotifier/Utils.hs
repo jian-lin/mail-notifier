@@ -23,12 +23,12 @@ import Network.HaskellNet.IMAP.SSL
 import Relude
 import UnliftIO (MonadUnliftIO, bracket, checkSTM, orElse, registerDelay, withRunInIO)
 
-atomicallyTimeout :: (MonadIO m) => Timeout -> STM a -> m (Maybe a)
+atomicallyTimeout :: (MonadIO m) => TimeoutMicroSecond -> STM a -> m (Maybe a)
 atomicallyTimeout microsecond action = do
   timer <- registerDelay $ fromInteger $ unTimeout microsecond
   atomically $ (Just <$> action) `orElse` (Nothing <$ (checkSTM <=< readTVar) timer)
 
-atomicallyTimeoutUntilFail_ :: (MonadIO m) => Timeout -> STM a -> m ()
+atomicallyTimeoutUntilFail_ :: (MonadIO m) => TimeoutMicroSecond -> STM a -> m ()
 atomicallyTimeoutUntilFail_ microsecond action = do
   result <- atomicallyTimeout microsecond action
   case result of

@@ -4,7 +4,7 @@ import Colog (Severity)
 import DBus (BusName, InterfaceName, MemberName, ObjectPath)
 import DBus.Client (AutoMethod, Client, ClientError, RequestNameReply)
 import Data.Text (toLower)
-import MailNotifier.Types.Timeout (Timeout)
+import MailNotifier.Types.Timeout (TimeoutMicroSecond, TimeoutMilliSecond)
 import Network.HaskellNet.IMAP.Connection (IMAPConnection)
 import Relude
 import UnliftIO (MonadUnliftIO, TBQueue)
@@ -37,9 +37,9 @@ data Config = Config
     passwordFile :: !FilePath,
     mbsyncConfigFile :: !FilePath,
     mailboxes :: !(NonEmpty Mailbox),
-    idleTimeout :: !Timeout,
-    readSyncJobsTimeout :: !Timeout,
-    pollInterval :: !Timeout,
+    idleTimeout :: !TimeoutMilliSecond,
+    readSyncJobsTimeout :: !TimeoutMicroSecond,
+    pollInterval :: !TimeoutMicroSecond,
     logLevel :: !Severity
   }
   deriving stock (Show)
@@ -74,8 +74,6 @@ newtype Mailbox = Mailbox Text
   deriving stock (Show, Eq)
   deriving newtype (Hashable, IsString, ToString)
 
-data IdleMode = Idle | Sleep deriving stock (Eq)
-
 newtype MailNumber = MailNumber Integer
   deriving stock (Show, Eq)
   deriving newtype (Num)
@@ -86,7 +84,8 @@ class (Monad m) => MonadMailRead m where
   listMailboxesM :: ImapConnection -> m [Mailbox]
   selectMailboxM :: ImapConnection -> Mailbox -> m ()
   getMailNumM :: ImapConnection -> m MailNumber
-  idleOrSleepM :: ImapConnection -> Timeout -> IdleMode -> m ()
+  idleM :: ImapConnection -> TimeoutMilliSecond -> m ()
+  sleepM :: TimeoutMicroSecond -> m ()
 
 newtype DBusClient = DBusClient {unDBusClient :: Client}
 
@@ -94,8 +93,8 @@ class (Monad m) => MonadSync m where
   addSyncJobM :: SyncJobQueue -> m ()
 
   -- | Wait infinitely for one sync job.  After getting one, continue waiting for
-  -- following jobs which appears within 'Timeout' seconds from the last one.
-  waitForSyncJobsM :: SyncJobQueue -> Timeout -> m ()
+  -- following jobs which appears within 'TimeoutMicroSecond' from the last one.
+  waitForSyncJobsM :: SyncJobQueue -> TimeoutMicroSecond -> m ()
 
   syncM :: FilePath -> [Text] -> m (ProcessStdoutOutput, ProcessStderrOutput)
   signalSyncDoneM ::
@@ -151,7 +150,7 @@ class (Monad m) => MonadDBus m where
     DBusExportedAction ->
     m ()
   notifySystemdReadyM :: m ()
-  waitSyncJobsM :: SyncJobQueue -> Timeout -> m ()
+  waitSyncJobsM :: SyncJobQueue -> TimeoutMicroSecond -> m ()
   emitM :: DBusClient -> DBusObjectPath -> DBusInterfaceName -> DBusMemberName -> m ()
 
 newtype ProcessStdoutOutput = ProcessStdoutOutput Text

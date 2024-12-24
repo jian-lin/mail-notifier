@@ -56,12 +56,14 @@ instance MonadMailRead (App env) where
     handleAny (throwIO . MailSelectMailboxError mailbox)
       $ liftIO (select conn (toString mailbox))
   getMailNumM (ImapConnection conn) = liftIO $ MailNumber <$> exists conn
-  idleOrSleepM (ImapConnection conn) timeout mode =
-    handleAny (throwIO . MailIdleOrSleepError timeout)
+  idleM (ImapConnection conn) timeout =
+    handleAny (throwIO . MailIdleError timeout)
       $ liftIO
-      $ if mode == Idle
-        then idle conn (fromInteger $ unTimeout timeout)
-        else threadDelay (fromInteger $ unTimeout timeout)
+      $ idle conn (fromInteger $ unTimeout timeout)
+  sleepM timeout =
+    handleAny (throwIO . MailSleepError timeout)
+      $ liftIO
+      $ threadDelay (fromInteger $ unTimeout timeout)
 
 instance MonadSync (App env) where
   addSyncJobM (SyncJobQueue queue) = atomically $ writeTBQueue queue ()
