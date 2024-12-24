@@ -1,5 +1,6 @@
 module MailNotifier.App where
 
+import Control.Exception.Safe (MonadCatch, MonadThrow, handle, handleAny, throwIO)
 import DBus (methodCall, methodCallDestination)
 import DBus.Client
   ( RequestNameReply (NamePrimaryOwner),
@@ -23,7 +24,7 @@ import Network.HaskellNet.IMAP.Connection (exists)
 import Relude
 import System.Exit (ExitCode (ExitSuccess))
 import System.Systemd.Daemon (notifyReady, notifyWatchdog)
-import UnliftIO (MonadUnliftIO, handle, handleAny, mapConcurrently, throwIO)
+import UnliftIO (MonadUnliftIO, mapConcurrently)
 import UnliftIO.Concurrent (threadDelay)
 import UnliftIO.Process (readProcessWithExitCode)
 import UnliftIO.STM (readTBQueue, writeTBQueue)
@@ -35,7 +36,9 @@ newtype App (env :: (Type -> Type) -> Type) a = App {runApp :: ReaderT (env (App
       Monad,
       MonadReader (env (App env)),
       MonadIO,
-      MonadUnliftIO
+      MonadUnliftIO,
+      MonadThrow,
+      MonadCatch
     )
 
 run :: App env a -> env (App env) -> IO a

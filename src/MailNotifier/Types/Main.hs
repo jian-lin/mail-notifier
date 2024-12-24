@@ -1,6 +1,7 @@
 module MailNotifier.Types.Main where
 
 import Colog (Severity)
+import Control.Exception.Safe (MonadCatch, MonadThrow)
 import DBus (BusName, InterfaceName, MemberName, ObjectPath)
 import DBus.Client (AutoMethod, Client, ClientError, RequestNameReply)
 import Data.Text (toLower)
@@ -78,7 +79,7 @@ newtype MailNumber = MailNumber Integer
   deriving stock (Show, Eq)
   deriving newtype (Num)
 
-class (Monad m) => MonadMailRead m where
+class (MonadThrow m, MonadCatch m) => MonadMailRead m where
   loginM :: ImapConnection -> Username -> Password -> m ()
   getCapabilitiesM :: ImapConnection -> m [Capability]
   listMailboxesM :: ImapConnection -> m [Mailbox]
@@ -89,7 +90,7 @@ class (Monad m) => MonadMailRead m where
 
 newtype DBusClient = DBusClient {unDBusClient :: Client}
 
-class (Monad m) => MonadSync m where
+class (MonadThrow m, MonadCatch m) => MonadSync m where
   addSyncJobM :: SyncJobQueue -> m ()
 
   -- | Wait infinitely for one sync job.  After getting one, continue waiting for
@@ -105,14 +106,14 @@ class (Monad m) => MonadSync m where
     DBusMemberName ->
     m ()
 
-class (Monad m) => MonadWatchdog m where
+class (MonadThrow m) => MonadWatchdog m where
   signalCheckedMailboxM :: Mailbox -> WatchdogState -> m ()
   notiftyWatchdogWhenAllMailboxesAreCheckedM :: WatchdogState -> m (Maybe ())
 
 newtype EnvVar = EnvVar Text
   deriving newtype (ToString)
 
-class (Monad m) => MonadIORead m where
+class (MonadThrow m) => MonadIORead m where
   readFileM :: FilePath -> m Text
   lookupEnvM :: Text -> m (Maybe EnvVar)
 
@@ -140,7 +141,7 @@ newtype DBusClientError = DBusClientError ClientError
 newtype DBusExportedAction = DBusExportedAction (IO ())
   deriving newtype (AutoMethod)
 
-class (Monad m) => MonadDBus m where
+class (MonadThrow m, MonadCatch m) => MonadDBus m where
   requestNameM :: DBusClient -> DBusBusName -> m ()
   exportM ::
     DBusClient ->
