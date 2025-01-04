@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Colog (HasLog (..), LogAction, Message, Severity (Info))
+import Control.Exception.Uncaught (setDisplayExceptionHandler)
 import MailNotifier (app)
 import MailNotifier.App (run)
 import MailNotifier.Types
@@ -121,6 +122,7 @@ instance HasWatchdogState (Env m) where
 
 main :: IO ()
 main = do
+  setDisplayExceptionHandler
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   config <- parseConfig
   -- Since mailboxNum >= 0, it can be safely converted to Natural.

@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Colog (HasLog (..), LogAction, Message, Severity (Info))
+import Control.Exception.Uncaught (setDisplayExceptionHandler)
 import MailNotifier (appDBusBroker)
 import MailNotifier.App (run)
 import MailNotifier.Types
@@ -25,6 +26,7 @@ instance HasSyncJobQueue (Env m) where
 
 main :: IO ()
 main = do
+  setDisplayExceptionHandler
   hSetBuffering stdout LineBuffering -- print log while running under systemd
   queue <- atomically $ newTBQueue 10
   let env =

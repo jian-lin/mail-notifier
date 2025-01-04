@@ -110,7 +110,7 @@ instance MonadIORead (App env) where
   readFileM filePath = do
     eContent <- decodeUtf8' <$> readFileBS filePath
     case eContent of
-      Left err -> throwIO $ PasswordDecodeException err
+      Left err -> throwIO $ PasswordDecodeException filePath err
       Right content -> pure content
   lookupEnvM = (fmap . fmap) (EnvVar . toText) . lookupEnv . toString
 
