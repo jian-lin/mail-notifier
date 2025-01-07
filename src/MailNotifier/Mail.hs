@@ -1,6 +1,9 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module MailNotifier.Mail (watch) where
 
 import Colog (Message, WithLog, logDebug, logInfo)
+import Data.String.Interpolate (i)
 import MailNotifier.Types
 import Relude
 
@@ -18,18 +21,18 @@ watch ::
   ImapConnection ->
   m Void
 watch password mailbox conn = do
-  logInfo $ "watch " <> show mailbox
+  logInfo [i|watch #{mailbox}|]
   config <- asks getConfig
   loginM conn (username config) password
-  logDebug "logged in "
+  logDebug "logged in"
   capabilities <- getCapabilitiesM conn
-  logDebug $ "capabilities: " <> show capabilities
+  logDebug [i|"capabilities: #{capabilities}|]
   allMailboxes <- listMailboxesM conn
-  logDebug $ "mailboxes: " <> show allMailboxes
+  logDebug [i|mailboxes: #{allMailboxes}|]
   selectMailboxM conn mailbox
-  logDebug $ "selected " <> show mailbox
+  logDebug [i|"selected #{mailbox}|]
   mailNum <- getMailNumM conn
-  logInfo $ show mailNum <> " mails in " <> show mailbox
+  logInfo [i|#{mailNum} mails in #{mailbox}|]
   syncJobQueue <- asks getSyncJobQueue
   addSyncJobM syncJobQueue -- initial sync job
   let supportIdle = "IDLE" `elem` capabilities
@@ -37,7 +40,9 @@ watch password mailbox conn = do
         if supportIdle
           then idleM conn (idleTimeout config)
           else sleepM (pollInterval config)
-  logInfo $ "enter watchLoop, " <> if supportIdle then "use IDLE" else "fallback to poll"
+      watchMethod :: Text
+      watchMethod = if supportIdle then "use IDLE" else "fallback to poll"
+  logInfo [i|enter watchLoop, #{watchMethod}|]
   watchLoop mailNum watchAwhile (getMailNumM conn) mailbox
 
 watchLoop ::
@@ -58,14 +63,9 @@ watchLoop mailNum watchAwhile getMailNum mailbox = do
   watchAwhile
   newMailNum <- getMailNum
   if newMailNum == mailNum
-    then logDebug $ show mailbox <> " has no new mail, still " <> show mailNum
+    then logDebug [i|#{mailbox} has no new mail, still #{mailNum}|]
     else do
-      logInfo
-        $ show mailbox
-        <> " has "
-        <> show (newMailNum - mailNum)
-        <> " new mail(s), total "
-        <> show newMailNum
+      logInfo [i|#{mailbox} has #{newMailNum - mailNum} new mail(s), total #{newMailNum}|]
       syncJobQueue <- asks getSyncJobQueue
       addSyncJobM syncJobQueue
   watchLoop newMailNum watchAwhile getMailNum mailbox

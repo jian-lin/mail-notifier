@@ -1,6 +1,9 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module MailNotifier.Watchdog (watchdog) where
 
 import Colog (Message, WithLog, logDebug)
+import Data.String.Interpolate (i)
 import MailNotifier.Types
 import Relude
 
@@ -11,10 +14,9 @@ watchdog = infinitely $ do
   let mailboxNum = length $ mailboxes config
   watchdogState <- asks getWatchdogState
   mReply <- notiftyWatchdogWhenAllMailboxesAreCheckedM watchdogState
-  logDebug
-    $ "all "
-    <> show mailboxNum
-    <> " mailboxes are under watch, "
-    <> if isNothing mReply
-      then "but watchdog is not enabled by systemd"
-      else "sent watchdog to systemd"
+  let whatIsDone :: Text
+      whatIsDone =
+        if isNothing mReply
+          then "but watchdog is not enabled by systemd"
+          else "sent watchdog to systemd"
+  logDebug [i|all #{mailboxNum} mailboxes are under watch, #{whatIsDone}|]

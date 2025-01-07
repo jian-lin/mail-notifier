@@ -1,9 +1,11 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module MailNotifier (app, appDBusBroker) where
 
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
 import Data.List.NonEmpty ((<|))
+import Data.String.Interpolate (i, iii)
 import MailNotifier.DBus (sync)
 import MailNotifier.Mail (watch)
 import MailNotifier.Types
@@ -34,7 +36,7 @@ warnConfig mWatchdogTimeoutString = do
   --   a client may use up its memory (less likely in this case)
   --   a client may increase the overhead of its sheduler
   let mailboxNum = length $ mailboxes config
-  when (mailboxNum > 10) $ logWarning $ "too many mailboxes: " <> show mailboxNum
+  when (mailboxNum > 10) $ logWarning [i|too many mailboxes: #{mailboxNum}|]
 
   case mWatchdogTimeoutString >>= (readMaybe . toString) of
     Just watchdogTimeout ->
@@ -43,13 +45,11 @@ warnConfig mWatchdogTimeoutString = do
             || (watchdogTimeout <= unTimeout (idleTimeout config) * 1_000)
         )
         $ logWarning
-        $ "systemd WatchdogSec ("
-        <> show watchdogTimeout
-        <> ") is smaller than poll interval ("
-        <> show (pollInterval config)
-        <> ") or idle timeout ("
-        <> show (unTimeout (idleTimeout config) * 1_000)
-        <> ") (unit: us)"
+          [iii|
+            systemd WatchdogSec (#{watchdogTimeout}) (unit: us) is smaller than
+            poll interval (#{pollInterval config})
+            or idle timeout (#{unTimeout (idleTimeout config) * 1000})
+          |]
     Nothing -> pure ()
 
 app ::
@@ -70,7 +70,7 @@ app = do
   logDebug $ show config
   password <- readFileM (passwordFile config)
   warnConfig =<< lookupEnvM "WATCHDOG_USEC"
-  logInfo $ "DBus: " <> show busName <> " " <> show objectPath <> " " <> show interfaceName
+  logInfo [i|DBus: #{busName} #{objectPath} #{interfaceName}|]
   let imapConfig =
         ImapConfig
           { sslMaxLineLength' = 60_000,
@@ -85,7 +85,7 @@ emitSignal client = infinitely $ do
   queue <- asks getSyncJobQueue
   waitSyncJobsM queue $(mkTimeoutMicroSecondTH 1_000_000)
   emitM client objectPath interfaceName muaSyncSignalName
-  logInfo $ "emitted signal: " <> show muaSyncSignalName
+  logInfo [i|emitted signal: #{muaSyncSignalName}|]
 
 -- TODO try to add some log
 getSyncNotification :: SyncJobQueue -> IO ()
@@ -93,9 +93,9 @@ getSyncNotification (SyncJobQueue queue) = atomically $ writeTBQueue queue ()
 
 appDBusBroker :: (WithLog env Message m, HasSyncJobQueue env, MonadDBus m) => DBusClient -> m Void
 appDBusBroker client = do
-  logInfo $ "try to request " <> show busName
+  logInfo [i|try to request #{busName}|]
   requestNameM client busName
-  logInfo $ "requested " <> show busName
+  logInfo [i|"requested #{busName}|]
   queue <- asks getSyncJobQueue
   exportM
     client
@@ -103,13 +103,7 @@ appDBusBroker client = do
     interfaceName
     syncNotificationMethodName
     (DBusExportedAction $ getSyncNotification queue)
-  logInfo
-    $ "exported method "
-    <> show syncNotificationMethodName
-    <> " at "
-    <> show objectPath
-    <> " "
-    <> show interfaceName
+  logInfo [i|exported method #{syncNotificationMethodName} at #{objectPath} #{interfaceName}|]
   notifySystemdReadyM
   logInfo "wait for sync notifications"
   emitSignal client

@@ -1,6 +1,9 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module MailNotifier.DBus (sync) where
 
 import Colog (Message, WithLog, logDebug, logInfo, logWarning)
+import Data.String.Interpolate (iii)
 import Data.Text qualified as T
 import MailNotifier.Types
 import MailNotifier.Utils (busName, interfaceName, objectPath, syncNotificationMethodName)
@@ -25,12 +28,8 @@ sync client = infinitely $ do
   unless (T.null $ toText processStderrOutput) $ logWarning $ toText processStderrOutput
   signalSyncDoneM client busName objectPath interfaceName syncNotificationMethodName
   logDebug
-    $ "DBus: called method "
-    <> show syncNotificationMethodName
-    <> " at "
-    <> show busName
-    <> " "
-    <> show objectPath
-    <> " "
-    <> show interfaceName
+    [iii|
+      DBus: called method #{syncNotificationMethodName}
+      at #{busName} #{objectPath} #{interfaceName}
+    |]
   logInfo "sent a synced notification"
