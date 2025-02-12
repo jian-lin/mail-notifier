@@ -54,6 +54,7 @@
             cabal-fmt
             ghcid
             haskell-language-server
+            ormolu # TODO replace it with treefmt?
           ])
           ++ (with pkgs; [
             nixfmt-rfc-style
