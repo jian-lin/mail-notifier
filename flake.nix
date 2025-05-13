@@ -39,6 +39,21 @@
                   };
                 in
                 hfinal.callCabal2nix projectName src { };
+              HaskellNet =
+                hprev.HaskellNet
+                |> hlib.markUnbroken
+                |> hlib.overrideSrc {
+                  # use a fork of wireapp to easily apply https://github.com/qnikst/HaskellNet/pull/98
+                  src = final.fetchFromGitHub {
+                    owner = "wireapp";
+                    repo = "HaskellNet";
+                    rev = "74cde03b4beb09794a6120ea5321a09430bcd2c7";
+                    hash = "sha256-VIM60sXCVC25ULf/2yPvqANK/h9BY6dEYY3o3/xiEEQ=";
+                  };
+                  # 0.6.1.2 is the latest version on Hackage
+                  # even though the latest tag of upstream source repo is 0.6.1.0
+                  version = "0.6.1.2-unstable-2025-05-08";
+                };
             }
           );
         });
