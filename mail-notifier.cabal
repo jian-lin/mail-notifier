@@ -26,8 +26,8 @@ common thread
 
 common deps
   build-depends:
-    , base                  ^>=4.18.2.1 || ^>=4.19.2.0
-    , co-log                ^>=0.6.1.0
+    , base                  ^>=4.18.2.1 || ^>=4.19.2.0 || ^>=4.20.2.0
+    , co-log                ^>=0.6.1.0  || ^>=0.7.0.0
     , optparse-applicative  ^>=0.18.1.0
     , relude                ^>=1.2.1.0
     , uncaught-exception    ^>=0.1.0
@@ -64,13 +64,13 @@ library
 
   -- other-extensions:
   build-depends:
-    , dbus                ^>=1.3.3
+    , dbus                ^>=1.3.3    || ^>=1.4.1
     , HaskellNet          ^>=0.6.1.2
     , HaskellNet-SSL      ^>=0.4.0.0
     , safe-exceptions     ^>=0.1.7.4
     , string-interpolate  ^>=0.3.4.0
     , systemd             ^>=2.3.0    || ^>=2.4.0
-    , template-haskell    ^>=2.20.0.0 || ^>=2.21.0.0
+    , template-haskell    ^>=2.20.0.0 || ^>=2.21.0.0 || ^>=2.22.0.0
 
   hs-source-dirs:  src
 
